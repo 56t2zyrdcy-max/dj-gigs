@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your DJ oZMEn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0B0014;
+    --curtain:#1D0B33;
+    --curtain-2:#2A1147;
+    --magenta:#FF2E88;
+    --cyan:#28E7FF;
+    --gold:#FFC857;
+    --foam:#F5F0FF;
+    --muted:#9C8FBF;
+    --mint:#7CF5B6;
+    --radius:20px;
+  }
+  *{box-sizing:border-box;}
+  html,body{ overflow-x:hidden; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:radial-gradient(ellipse at top, var(--curtain) 0%, var(--void) 65%);
+    font-family:'Inter', sans-serif;
+    color:var(--foam);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 60px;
+    position:relative;
+  }
+
+  /* ---- signature: drifting stage lights behind everything ---- */
+  .stage-lights{ position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+  .stage-lights span{
+    position:absolute; width:62vmax; height:62vmax; border-radius:50%;
+    filter:blur(90px); opacity:0.32; mix-blend-mode:screen;
+  }
+  .stage-lights span:nth-child(1){ background:var(--magenta); top:-22%; left:-14%; animation:driftA 15s ease-in-out infinite; }
+  .stage-lights span:nth-child(2){ background:var(--cyan); bottom:-28%; right:-16%; animation:driftB 19s ease-in-out infinite; }
+  @keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(9%,7%) scale(1.18);}}
+  @keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-8%,-9%) scale(1.12);}}
+  @media (prefers-reduced-motion: reduce){ .stage-lights span{animation:none;} }
+
+  .app{ width:100%; max-width:420px; position:relative; z-index:1; }
+
+  .deck{ text-align:center; margin-bottom:26px; }
+
+  /* ---- signature: spinning vinyl + drop-the-needle tonearm ---- */
+  .turntable{ position:relative; width:132px; height:132px; margin:0 auto 16px; }
+  .vinyl{
+    width:100%; height:100%; border-radius:50%;
+    background-color:#15101C;
+    background-image:
+      repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0 2px, rgba(0,0,0,0.2) 2px 5px);
+    box-shadow:0 14px 34px -12px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255,255,255,0.06);
+    animation:spin 3.4s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .vinyl .label{
+    position:absolute; inset:36%; border-radius:50%;
+    background:conic-gradient(from 180deg, var(--magenta), var(--cyan), var(--magenta));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:11px; color:var(--void);
+  }
+  .vinyl .hole{ position:absolute; inset:47%; border-radius:50%; background:var(--void); }
+  .tonearm{
+    position:absolute; top:-4px; right:-14px; width:78px; height:9px;
+    transform-origin:88% 25%;
+    transform:rotate(-34deg);
+    transition:transform 0.55s cubic-bezier(.34,1.7,.64,1);
+  }
+  .tonearm::before{
+    content:""; position:absolute; inset:0; border-radius:4px;
+    background:linear-gradient(90deg, var(--gold), #B8873A);
+    box-shadow:0 3px 8px rgba(0,0,0,0.5);
+  }
+  .tonearm::after{
+    content:""; position:absolute; left:-5px; top:-5px; width:14px; height:14px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 0 5px rgba(255,200,87,0.14);
+  }
+  .tonearm.dropped{ transform:rotate(-4deg); }
+  @media (prefers-reduced-motion: reduce){
+    .vinyl{ animation:none; }
+    .tonearm{ transition:none; }
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:3px;
+    color:var(--magenta); margin:0 0 8px; text-transform:uppercase;
+  }
+  .eyebrow .dot{
+    display:inline-block; width:6px;height:6px; border-radius:50%;
+    background:var(--magenta); margin-right:6px; animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .deck h1{
+    font-family:'Anton', sans-serif; font-weight:400; font-size:46px;
+    letter-spacing:1px; margin:0 0 8px; text-transform:uppercase;
+    background:linear-gradient(100deg, var(--foam) 40%, var(--cyan) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .deck .sub{ color:var(--muted); font-size:14px; margin:0; }
+  .deck .note{ color:var(--magenta); font-size:11.5px; margin:8px 0 0; line-height:1.4; }
+
+  .ticket{
+    position:relative; background:var(--curtain); border-radius:var(--radius);
+    border:1px solid rgba(255,46,136,0.28);
+    box-shadow:0 22px 50px -20px rgba(0,0,0,0.85), 0 0 44px -14px rgba(255,46,136,0.2);
+    overflow:visible;
+  }
+  .ticket-top, .ticket-bottom{ padding:24px 22px; }
+  label{
+    display:block; font-family:'JetBrains Mono', monospace; font-size:11px;
+    letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:10px;
+  }
+  #songInput{
+    width:100%; background:rgba(245,240,255,0.06); border:1px solid rgba(245,240,255,0.15);
+    border-radius:10px; padding:14px 14px; font-size:16px; color:var(--foam); font-family:'Inter', sans-serif;
+  }
+  #songInput:focus{ outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
+  #songInput::placeholder{color:var(--muted);}
+
+  .perforation{ position:relative; height:0; border-top:2px dashed rgba(245,240,255,0.2); }
+  .perforation::before, .perforation::after{
+    content:""; position:absolute; top:-11px; width:22px;height:22px; border-radius:50%;
+    background:radial-gradient(ellipse at top, var(--curtain) 0%, var(--void) 65%);
+  }
+  .perforation::before{left:-11px;}
+  .perforation::after{right:-11px;}
+
+  .tip-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
+  .tip-btn{
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:14px; padding:12px 4px;
+    border-radius:10px; border:1px solid rgba(245,240,255,0.18); background:transparent;
+    color:var(--foam); cursor:pointer; transition:all 0.15s ease;
+  }
+  .tip-btn:hover{border-color:var(--cyan);}
+  .tip-btn.active{
+    background:linear-gradient(120deg, var(--magenta), var(--cyan));
+    border-color:transparent; color:var(--void);
+  }
+  .tip-btn:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+
+  #customAmt{
+    width:100%; background:rgba(245,240,255,0.06); border:1px solid rgba(245,240,255,0.15);
+    border-radius:10px; padding:12px 14px; font-family:'JetBrains Mono', monospace; font-size:15px;
+    color:var(--foam); margin-bottom:14px;
+  }
+  #customAmt:focus{outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent;}
+
+  .stamp-row{ display:flex; align-items:center; justify-content:space-between; }
+  .stamp-label{ font-size:12px; color:var(--muted); }
+  .stamp{
+    font-family:'Anton', sans-serif; font-weight:400; font-size:28px; color:var(--gold);
+    border:2px solid var(--gold); border-radius:8px; padding:2px 14px; transform:rotate(-3deg); letter-spacing:1px;
+  }
+
+  .actions{margin-top:20px;}
+  #paypal-button-container{margin-bottom:12px; min-height:45px;}
+  .free-btn{
+    width:100%; background:transparent; border:1px solid rgba(245,240,255,0.25); color:var(--foam);
+    padding:14px; border-radius:12px; font-family:'Inter', sans-serif; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .free-btn:hover{border-color:var(--cyan);}
+  .free-btn:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .free-btn:disabled{opacity:0.5; cursor:not-allowed;}
+
+  #statusMsg{ text-align:center; margin-top:16px; font-size:13px; min-height:18px; }
+  #statusMsg.error{color:var(--magenta);}
+  #statusMsg.success{color:var(--mint);}
+
+  .config-warning{
+    background:rgba(255,46,136,0.12);
+    border:1px solid rgba(255,46,136,0.4);
+    color:var(--foam);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:12.5px;
+    line-height:1.5;
+    margin-bottom:18px;
+  }
+  .config-warning b{ color:var(--magenta); }
+</style>
+</head>
+<body>
+
+<div class="stage-lights" aria-hidden="true"><span></span><span></span></div>
+
+<div class="app">
+  <div class="deck">
+    <div class="turntable" aria-hidden="true">
+      <div class="vinyl">
+        <div class="label">DJ</div>
+        <div class="hole"></div>
+      </div>
+      <div class="tonearm" id="tonearm"></div>
+    </div>
+    <p class="eyebrow"><span class="dot"></span>Live on deck</p>
+    <h1>Your DJ oZMEn</h1>
+    <p class="sub">Tell the DJ what to play next. Tip if you want it moved up.</p>
+    <p class="note">Tonight's requests must fit the AIDA HEUTE concept — songs outside that theme won't be played.</p>
+    <p class="note">Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen — Songs außerhalb dieses Themas werden nicht gespielt.</p>
+  </div>
+
+  <div id="configWarning" class="config-warning" hidden>
+    ⚠️ <b>Setup incomplete:</b> Firebase and/or PayPal aren't connected yet. Requests won't be saved and payments won't work until the real config is pasted in. This message disappears automatically once it's set up.
+  </div>
+
+  <form class="ticket" id="requestForm">
+    <div class="ticket-top">
+      <label for="songInput">Artist &amp; Song</label>
+      <input id="songInput" name="songInput" placeholder="e.g. Fred again.. – Marea" autocomplete="off" required>
+    </div>
+
+    <div class="perforation" aria-hidden="true"></div>
+
+    <div class="ticket-bottom">
+      <label>Add a tip (optional)</label>
+      <div class="tip-grid" role="group" aria-label="Tip amount">
+        <button type="button" class="tip-btn" data-amt="0">€0</button>
+        <button type="button" class="tip-btn" data-amt="5">€5</button>
+        <button type="button" class="tip-btn" data-amt="10">€10</button>
+        <button type="button" class="tip-btn" id="customToggle" data-amt="custom">Custom</button>
+      </div>
+      <input type="number" id="customAmt" min="1" step="1" placeholder="€ amount" hidden>
+
+      <div class="stamp-row">
+        <span class="stamp-label">Selected tip</span>
+        <span class="stamp" id="amountStamp">€0</span>
+      </div>
+    </div>
+  </form>
+
+  <div class="actions">
+    <div id="paypal-button-container"></div>
+    <button type="button" class="free-btn" id="sendFreeBtn">Send request without a tip (Ohne Trinkgeld senden)</button>
+    <p id="statusMsg" role="status"></p>
+  </div>
+</div>
+
+<!--
+  ======================== FIREBASE SETUP ========================
+  1. Go to https://console.firebase.google.com and create a free project.
+  2. In the project, click "Build > Realtime Database" and create a database
+     (start in test mode for now — lock it down later, see note at bottom).
+  3. Go to Project Settings > General > "Your apps" > Add app > Web (</>).
+  4. Copy the firebaseConfig object it gives you and paste it below,
+     replacing the placeholder.
+  5. Do the exact same paste in admin.html so both pages talk to the
+     same database.
+  ==================================================================
+-->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBcGSMD9MCmSml8epSDbCnkykyk1wW-w6E",
+    authDomain: "djozmen-53d67.firebaseapp.com",
+    databaseURL: "https://djozmen-53d67-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "djozmen-53d67",
+    storageBucket: "djozmen-53d67.firebasestorage.app",
+    messagingSenderId: "1097752024636",
+    appId: "1:1097752024636:web:1c022d20fba91a2d6e5539"
+  };
+  let db = null;
+  let firebaseReady = false;
+  const isPlaceholder = Object.values(firebaseConfig).some(v => typeof v === 'string' && v.includes('YOUR_'));
+  if (!isPlaceholder){
+    try{
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      firebaseReady = true;
+    }catch(e){
+      console.error('Firebase init failed:', e);
+    }
+  } else {
+    console.warn('Firebase config still has placeholder values — requests will not be saved.');
+  }
+</script>
+
+<!--
+  PayPal Smart Buttons SDK.
+  Replace YOUR_PAYPAL_CLIENT_ID with your own PayPal REST app Client ID
+  (get one at https://developer.paypal.com/dashboard/applications).
+-->
+<script>
+  const PAYPAL_CLIENT_ID = "AfqnjGEn37sMK1UYlSJoE5O_LaMrilG5_gXjEldYu7ryN91taFyagxkIiAVGKAVTikTQnyoyCNhy-Ayr";
+  window.__paypalReady = false;
+  if (!PAYPAL_CLIENT_ID.includes('YOUR_')){
+    const s = document.createElement('script');
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=EUR';
+    s.onload = () => { window.__paypalReady = true; window.dispatchEvent(new Event('paypalsdkready')); };
+    s.onerror = () => { console.error('PayPal SDK failed to load.'); };
+    document.head.appendChild(s);
+  } else {
+    console.warn('PayPal client ID still has a placeholder value — payments are disabled.');
+  }
+</script>
+
+<script>
+(function(){
+  const songInput = document.getElementById('songInput');
+  const tipButtons = document.querySelectorAll('.tip-btn');
+  const customAmt = document.getElementById('customAmt');
+  const amountStamp = document.getElementById('amountStamp');
+  const statusMsg = document.getElementById('statusMsg');
+  const sendFreeBtn = document.getElementById('sendFreeBtn');
+  const paypalContainer = document.getElementById('paypal-button-container');
+  const configWarning = document.getElementById('configWarning');
+  const tonearm = document.getElementById('tonearm');
+
+  let selectedAmount = 0;
+
+  // Show a friendly banner instead of letting the page silently fail
+  // when Firebase and/or PayPal haven't been configured yet.
+  if (!firebaseReady || PAYPAL_CLIENT_ID.includes('YOUR_')){
+    configWarning.hidden = false;
+  }
+
+  function setStatus(msg, type){
+    statusMsg.textContent = msg;
+    statusMsg.className = type || '';
+  }
+
+  // Drop the needle as a little reward when a request lands successfully.
+  function dropNeedle(){
+    tonearm.classList.add('dropped');
+    setTimeout(() => tonearm.classList.remove('dropped'), 1800);
+  }
+
+  function updatePaypalVisibility(){
+    // No point showing a payment button for €0 — that's a free request.
+    paypalContainer.style.display = selectedAmount > 0 ? 'block' : 'none';
+    sendFreeBtn.textContent = selectedAmount > 0
+      ? 'Or send without paying the tip (Oder ohne Trinkgeld senden)'
+      : 'Send request (Anfrage senden)';
+  }
+
+  function setAmount(amt){
+    selectedAmount = amt;
+    amountStamp.textContent = '€' + amt;
+    updatePaypalVisibility();
+  }
+
+  tipButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tipButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (btn.dataset.amt === 'custom'){
+        customAmt.hidden = false;
+        customAmt.focus();
+        setAmount(Number(customAmt.value) || 0);
+      } else {
+        customAmt.hidden = true;
+        setAmount(Number(btn.dataset.amt));
+      }
+    });
+  });
+
+  customAmt.addEventListener('input', () => {
+    setAmount(Number(customAmt.value) || 0);
+  });
+
+  function currentSong(){ return songInput.value.trim(); }
+
+  function validateSong(){
+    if (!currentSong()){
+      setStatus('Add the artist and song name first.', 'error');
+      songInput.focus();
+      return false;
+    }
+    return true;
+  }
+
+  // Pushes a request straight into Firebase — the admin dashboard
+  // listens to this same path and updates instantly.
+  function saveRequest(tipStatus, amount, paypalOrderId){
+    if (!firebaseReady || !db){
+      console.warn('Firebase is not configured — request was not saved.');
+      return Promise.resolve(false);
+    }
+    const record = {
+      song: currentSong(),
+      amount: amount || 0,
+      tipStatus,            // 'paid' | 'none'
+      paypalOrderId: paypalOrderId || null,
+      createdAt: Date.now(),
+      played: false
+    };
+    return db.ref('requests').push(record)
+      .then(() => true)
+      .catch(err => { console.error('Firebase error:', err); return false; });
+  }
+
+  function resetForm(){
+    songInput.value = '';
+    customAmt.value = '';
+    customAmt.hidden = true;
+    tipButtons.forEach(b => b.classList.remove('active'));
+    setAmount(0);
+  }
+
+  sendFreeBtn.addEventListener('click', async () => {
+    if (!validateSong()) return;
+    sendFreeBtn.disabled = true;
+    setStatus('Sending your request…');
+    const ok = await saveRequest('none', 0, null);
+    sendFreeBtn.disabled = false;
+    if (ok){
+      setStatus('Request sent. The DJ has it now 🎧', 'success');
+      dropNeedle();
+      resetForm();
+    } else {
+      setStatus(firebaseReady ? 'Something went wrong. Try again.' : 'Setup isn\'t finished yet — this request could not be saved.', 'error');
+    }
+  });
+
+  function renderPaypalButtons(){
+    if (!window.paypal) return;
+    paypal.Buttons({
+      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'pay' },
+      createOrder: function(data, actions){
+        if (!validateSong()) { return Promise.reject('missing-song'); }
+        if (!selectedAmount || selectedAmount <= 0){
+          setStatus('Choose a tip amount, or send without a tip.', 'error');
+          return Promise.reject('missing-amount');
+        }
+        return actions.order.create({
+          purchase_units: [{
+            description: 'Song request tip: ' + currentSong(),
+            amount: { value: selectedAmount.toFixed(2), currency_code: 'EUR' }
+          }]
+        });
+      },
+      onApprove: function(data, actions){
+        return actions.order.capture().then(async function(){
+          setStatus('Processing…');
+          const ok = await saveRequest('paid', selectedAmount, data.orderID);
+          if (ok){
+            setStatus('Tip received — request sent 🎉', 'success');
+            dropNeedle();
+            resetForm();
+          } else {
+            setStatus('Payment went through, but saving the request failed. Show this screen to the DJ.', 'error');
+          }
+        });
+      },
+      onError: function(err){
+        console.error('PayPal error:', err);
+        setStatus('Payment failed. Try again or send without a tip.', 'error');
+      },
+      onCancel: function(){
+        setStatus('Payment cancelled.', '');
+      }
+    }).render('#paypal-button-container').catch(err => console.error('PayPal render error:', err));
+  }
+
+  if (window.__paypalReady) {
+    renderPaypalButtons();
+  } else {
+    window.addEventListener('paypalsdkready', renderPaypalButtons, { once: true });
+  }
+
+  if (PAYPAL_CLIENT_ID.includes('YOUR_')){
+    paypalContainer.innerHTML =
+      '<p style="color:#9C8FBF;font-size:12px;text-align:center;">PayPal isn\'t configured yet — set your client ID in the code.</p>';
+  }
+
+  setAmount(0);
+})();
+</script>
+
+</body>
+</html>
