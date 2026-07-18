@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DJ oZMEn — Links</title>
+<style>
+  :root{
+    --cyan:#22ffe0;
+    --magenta:#ff2fd8;
+    --bg1:#0a0c12;
+    --bg2:#150814;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: radial-gradient(circle at 20% 0%, #0d2224 0%, var(--bg1) 45%, var(--bg2) 100%);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:#f2f2f5;
+  }
+  .wrap{
+    max-width:480px; margin:0 auto; padding:56px 26px 70px;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  .eyebrow{
+    letter-spacing:4px; font-size:12px; font-weight:700; color:var(--magenta);
+    text-transform:uppercase; margin-bottom:14px; text-align:center;
+  }
+  h1{
+    font-size:44px; margin:0 0 10px; text-align:center; font-weight:800;
+    background:linear-gradient(90deg, #ffffff 0%, var(--cyan) 60%, #ffffff 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 30px rgba(34,255,224,0.25);
+  }
+  .sub{
+    text-align:center; color:#b9bfcd; font-size:15px; margin-bottom:36px;
+  }
+  .links{ width:100%; display:flex; flex-direction:column; gap:16px; }
+  .card{
+    display:flex; align-items:center; gap:16px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.09);
+    border-radius:18px; padding:16px 18px;
+    text-decoration:none; color:#fff;
+    transition:transform .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .card:active{ transform:scale(0.97); }
+  .icon{
+    width:48px; height:48px; border-radius:13px; flex:0 0 48px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 18px rgba(0,0,0,0.35);
+  }
+  .icon svg{ width:26px; height:26px; }
+  .label{ display:flex; flex-direction:column; gap:2px; }
+  .platform{ font-weight:700; font-size:16px; }
+  .handle{ font-size:13px; color:#9aa1b0; }
+
+  .youtube .icon{ background:linear-gradient(135deg,#ff3b30,#c4001d); }
+  .youtube{ border-color:rgba(255,59,48,0.35); }
+  .instagram .icon{ background:linear-gradient(135deg,#feda75,#d62976 55%,#4f5bd5); }
+  .instagram{ border-color:rgba(214,41,118,0.35); }
+  .spotify .icon{ background:linear-gradient(135deg,#3be477,#1db954); }
+  .spotify{ border-color:rgba(29,185,84,0.35); }
+  .apple .icon{ background:linear-gradient(135deg,#fb5c74,#fa233b); }
+  .apple{ border-color:rgba(250,35,59,0.35); }
+
+  .footer{
+    margin-top:48px; text-align:center; color:#6f7686; font-size:12px; letter-spacing:1px;
+  }
+  .footer b{ color:#9aa1b0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">Scan &amp; Follow</div>
+    <h1>DJ oZMEn</h1>
+    <div class="sub">Tüm bağlantılar burada / All my links in one place</div>
+
+    <div class="links">
+
+      <a class="card youtube" href="https://youtube.com/@djozmen?si=CKUE9C3-b2wywJ3Y" target="_blank" rel="noopener">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="#fff"><path d="M10 15.5l6-3.5-6-3.5z"/><rect x="2" y="6" width="20" height="12" rx="4" fill="none" stroke="#fff" stroke-width="1.6"/></svg>
+        </span>
+        <span class="label">
+          <span class="platform">YouTube</span>
+          <span class="handle">@djozmen</span>
+        </span>
+      </a>
+
+      <a class="card instagram" href="https://www.instagram.com/dj.ozmen" target="_blank" rel="noopener">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="1.1" fill="#fff" stroke="none"/></svg>
+        </span>
+        <span class="label">
+          <span class="platform">Instagram</span>
+          <span class="handle">@dj.ozmen</span>
+        </span>
+      </a>
+
+      <a class="card spotify" href="https://open.spotify.com/artist/7zSqCItxUl7N467rpgKlh8" target="_blank" rel="noopener">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0a2015" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10" fill="#0a2015" stroke="none"/><path d="M6.5 9.8c3.6-1.1 7.6-.8 10.6 1" stroke="#fff"/><path d="M7 13.2c3-1 6.4-.7 9 .8" stroke="#fff"/><path d="M7.6 16.3c2.5-.7 5.2-.5 7.3.7" stroke="#fff"/></svg>
+        </span>
+        <span class="label">
+          <span class="platform">Spotify</span>
+          <span class="handle">Dinle &amp; takip et</span>
+        </span>
+      </a>
+
+      <a class="card apple" href="https://music.apple.com/tr/album/%D0%BF%D1%80%D0%BE%D1%81%D1%82%D0%B8-%D0%BC%D0%B5%D0%BD%D1%8F-%D0%B0%D0%BD%D0%BD%D0%B0-single/6789585697?l=tr" target="_blank" rel="noopener">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="#fff"><path d="M15.5 5.2c.1 1-.3 2-1 2.7-.7.7-1.8 1.3-2.8 1.2-.1-1 .4-2 1-2.7.7-.8 1.9-1.3 2.8-1.2zM17.9 16c-.3.7-.6 1.3-1.1 2-.6.9-1.3 2-2.3 2-.9 0-1.2-.6-2.3-.6s-1.4.6-2.3.6c-1 0-1.8-1-2.4-1.9-1.6-2.4-2.8-6.7-1.2-9.7.8-1.5 2.2-2.4 3.7-2.4 1 0 1.9.7 2.5.7.6 0 1.7-.8 2.9-.7.5 0 1.9.2 2.8 1.5-.1.1-1.7 1-1.6 2.9 0 2.3 2 3 2.3 3.1z"/></svg>
+        </span>
+        <span class="label">
+          <span class="platform">Apple Music</span>
+          <span class="handle">Dinle &amp; takip et</span>
+        </span>
+      </a>
+
+    </div>
+
+    <div class="footer">DJ oZMEn · <b>Özkan Özmen</b></div>
+  </div>
+</body>
+</html>
