@@ -124,9 +124,53 @@
     margin-bottom:18px;
   }
   .config-warning b{ color:var(--coral); }
+
+  /* ---- Google sign-in gate ---- */
+  #authGate{
+    position:fixed; inset:0; z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    background:rgba(6,10,14,0.96); backdrop-filter:blur(6px);
+  }
+  #authGate[hidden]{ display:none; }
+  .gate-card{
+    max-width:360px; width:100%; text-align:center;
+    border:1px solid rgba(244,247,246,0.15); border-radius:16px;
+    padding:30px 24px; background:rgba(255,255,255,0.03);
+  }
+  .gate-card .big{
+    font-family:'Big Shoulders Display', sans-serif; font-size:30px;
+    text-transform:uppercase; color:var(--foam); margin-bottom:8px; line-height:1.05;
+  }
+  .gate-card p{ font-size:13px; color:var(--slate); line-height:1.55; margin-bottom:22px; }
+  #googleBtn{
+    width:100%; padding:13px 16px; border-radius:11px; cursor:pointer;
+    border:1px solid rgba(244,247,246,0.25); background:#fff; color:#1f1f1f;
+    font-size:14px; font-weight:600; display:flex; align-items:center;
+    justify-content:center; gap:10px;
+  }
+  #googleBtn:hover{ border-color:var(--coral); }
+  #googleBtn:disabled{ opacity:.55; cursor:default; }
+  #gateMsg{ margin-top:16px; font-size:12.5px; color:var(--coral); min-height:18px; margin-bottom:0; }
+  #signOutBtn{
+    background:transparent; border:1px solid rgba(244,247,246,0.2); color:var(--slate);
+    border-radius:9px; padding:7px 11px; font-size:11.5px; cursor:pointer;
+  }
+  #signOutBtn:hover{ border-color:var(--coral); color:var(--foam); }
 </style>
 </head>
 <body>
+
+<div id="authGate">
+  <div class="gate-card">
+    <div class="big">Booth locked</div>
+    <p>Sign in with the DJ Google account to open the live queue. Guests can send requests without signing in — only this panel is protected.</p>
+    <button id="googleBtn" type="button">
+      <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.1 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-2.8-.4-4.1H24v8.4h12.6c-.3 2.1-1.6 5.2-4.7 7.3l7.7 6c4.5-4.2 6.5-10.2 6.5-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.9-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.7-6c-2.1 1.4-4.8 2.3-7.6 2.3-6.3 0-11.6-3.6-13.5-8.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="gateMsg"></p>
+  </div>
+</div>
 
 <div class="wrap">
   <header>
@@ -149,6 +193,7 @@
     <button class="filter-btn" data-filter="unplayed">Unplayed</button>
     <button class="filter-btn" data-filter="paid">Tipped</button>
     <button id="soundToggle" type="button">🔊 Sound on</button>
+    <button id="signOutBtn" type="button" hidden>Sign out</button>
   </div>
 
   <div id="queue"></div>
@@ -164,7 +209,12 @@
 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
+  // Which Google account counts as the DJ is decided by the Realtime
+  // Database security rules, not by this file. This page simply tries to
+  // read the queue after sign-in: if the rules refuse, the account is not
+  // the DJ. That keeps the address out of this public repository.
   const firebaseConfig = {
     apiKey: "AIzaSyBcGSMD9MCmSml8epSDbCnkykyk1wW-w6E",
     authDomain: "djozmen-53d67.firebaseapp.com",
@@ -175,12 +225,15 @@
     appId: "1:1097752024636:web:1c022d20fba91a2d6e5539"
   };
   let db = null;
+  let auth = null;
   let firebaseReady = false;
   const isPlaceholder = Object.values(firebaseConfig).some(v => typeof v === 'string' && v.includes('YOUR_'));
   if (!isPlaceholder){
     try{
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
+      auth = firebase.auth();
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
       firebaseReady = true;
     }catch(e){
       console.error('Firebase init failed:', e);
@@ -303,29 +356,99 @@
 
   if (!firebaseReady || !db){
     document.getElementById('configWarning').hidden = false;
+    document.getElementById('authGate').hidden = true;
     render();
     return;
   }
 
-  // Live listeners
-  const ref = db.ref('requests');
+  // ---------------------------------------------------------------
+  //  Sign-in gate. The queue is only wired up once the DJ Google
+  //  account is signed in; the database rules enforce the same thing
+  //  server-side, so a curious guest editing this file gains nothing.
+  // ---------------------------------------------------------------
+  const authGate  = document.getElementById('authGate');
+  const googleBtn = document.getElementById('googleBtn');
+  const gateMsg   = document.getElementById('gateMsg');
+  const signOutBtn = document.getElementById('signOutBtn');
 
-  ref.once('value').then(() => { loadedInitial = true; }).catch(err => console.error('Firebase read error:', err));
+  let queueRef = null;
 
-  ref.on('child_added', (snap) => {
-    requests[snap.key] = snap.val();
-    if (loadedInitial) playBeep();
-    render();
+  function stopQueue(){
+    if (queueRef){ queueRef.off(); queueRef = null; }
+  }
+
+  function startQueue(){
+    if (queueRef) return;
+    const ref = db.ref('requests');
+    queueRef = ref;
+
+    ref.once('value').then(() => { loadedInitial = true; }).catch(err => console.error('Firebase read error:', err));
+
+    ref.on('child_added', (snap) => {
+      requests[snap.key] = snap.val();
+      if (loadedInitial) playBeep();
+      render();
+    });
+
+    ref.on('child_changed', (snap) => {
+      requests[snap.key] = snap.val();
+      render();
+    });
+
+    ref.on('child_removed', (snap) => {
+      delete requests[snap.key];
+      render();
+    });
+  }
+
+  googleBtn.addEventListener('click', () => {
+    gateMsg.textContent = '';
+    googleBtn.disabled = true;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    auth.signInWithPopup(provider)
+      .catch((e) => {
+        console.error('Google sign-in failed:', e);
+        gateMsg.textContent = e && e.code === 'auth/popup-blocked'
+          ? 'The browser blocked the sign-in window. Allow pop-ups for this page and try again.'
+          : 'Sign-in failed. Check your connection and try again.';
+      })
+      .finally(() => { googleBtn.disabled = false; });
   });
 
-  ref.on('child_changed', (snap) => {
-    requests[snap.key] = snap.val();
-    render();
-  });
+  signOutBtn.addEventListener('click', () => { auth.signOut(); });
 
-  ref.on('child_removed', (snap) => {
-    delete requests[snap.key];
+  function lockOut(msg){
+    stopQueue();
+    if (msg) gateMsg.textContent = msg;
+    authGate.hidden = false;
+    signOutBtn.hidden = true;
+    requests = {};
+    loadedInitial = false;
     render();
+  }
+
+  auth.onAuthStateChanged((user) => {
+    if (!user){ lockOut(''); return; }
+
+    // Ask the database whether this account is allowed to see the queue.
+    // The rules are the single source of truth for who the DJ is.
+    db.ref('requests').limitToLast(1).once('value')
+      .then(() => {
+        gateMsg.textContent = '';
+        authGate.hidden = true;
+        signOutBtn.hidden = false;
+        startQueue();
+        render();
+      })
+      .catch((e) => {
+        console.warn('Queue access denied:', e && e.code);
+        const wrongAccount = !e || e.code === 'PERMISSION_DENIED' || /permission/i.test(e.message || '');
+        lockOut(wrongAccount
+          ? 'This account is not the DJ account' + (user.email ? ' (' + user.email + ')' : '') + '.'
+          : 'Could not reach the database. Check your connection and try again.');
+        if (wrongAccount) auth.signOut();
+      });
   });
 
   render();

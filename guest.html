@@ -257,6 +257,7 @@
 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBcGSMD9MCmSml8epSDbCnkykyk1wW-w6E",
@@ -269,12 +270,30 @@
   };
   let db = null;
   let firebaseReady = false;
+
+  // Guests sign in anonymously. The database rules require a signed-in
+  // identity before a request may be created, which is what stops random
+  // scripts from writing into (or reading) the queue.
+  let authReady = Promise.resolve(false);
+
   const isPlaceholder = Object.values(firebaseConfig).some(v => typeof v === 'string' && v.includes('YOUR_'));
   if (!isPlaceholder){
     try{
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
       firebaseReady = true;
+
+      authReady = new Promise((resolve) => {
+        let settled = false;
+        const done = (ok) => { if (!settled){ settled = true; resolve(ok); } };
+        firebase.auth().onAuthStateChanged((user) => { if (user) done(true); });
+        firebase.auth().signInAnonymously().catch((e) => {
+          console.error('Anonymous sign-in failed:', e);
+          done(false);
+        });
+        // Never hang the send button forever on a flaky ship connection.
+        setTimeout(() => done(!!firebase.auth().currentUser), 12000);
+      });
     }catch(e){
       console.error('Firebase init failed:', e);
     }
@@ -379,22 +398,36 @@
 
   // Pushes a request straight into Firebase — the admin dashboard
   // listens to this same path and updates instantly.
-  function saveRequest(tipStatus, amount, paypalOrderId){
+  async function saveRequest(tipStatus, amount, paypalOrderId){
     if (!firebaseReady || !db){
       console.warn('Firebase is not configured — request was not saved.');
-      return Promise.resolve(false);
+      return false;
+    }
+    // Wait for the anonymous guest session before writing; the rules
+    // reject unauthenticated writes.
+    const signedIn = await authReady;
+    if (!signedIn){
+      console.error('No guest session — request was not saved.');
+      return false;
     }
     const record = {
       song: currentSong(),
       amount: amount || 0,
       tipStatus,            // 'paid' | 'none'
-      paypalOrderId: paypalOrderId || null,
       createdAt: Date.now(),
       played: false
     };
-    return db.ref('requests').push(record)
-      .then(() => true)
-      .catch(err => { console.error('Firebase error:', err); return false; });
+    // Only send paypalOrderId when there really is one — the rules require
+    // a paid request to carry its PayPal order id so the DJ can verify it.
+    if (paypalOrderId) record.paypalOrderId = paypalOrderId;
+
+    try{
+      await db.ref('requests').push(record);
+      return true;
+    }catch(err){
+      console.error('Firebase error:', err);
+      return false;
+    }
   }
 
   function resetForm(){
