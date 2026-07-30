@@ -377,8 +377,28 @@
     if (queueRef){ queueRef.off(); queueRef = null; }
   }
 
+  // Housekeeping: drop requests older than 48 hours whenever the DJ opens
+  // the panel. Paid requests are kept on purpose so the tip history stays
+  // intact — remove the tipStatus check below if you want those gone too.
+  function cleanupOld(){
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    db.ref('requests').orderByChild('createdAt').endAt(cutoff).once('value')
+      .then((snap) => {
+        let n = 0;
+        snap.forEach((child) => {
+          const r = child.val() || {};
+          if (r.tipStatus === 'paid') return;
+          db.ref('requests/' + child.key).remove();
+          n++;
+        });
+        if (n) console.log('Cleanup: removed ' + n + ' request(s) older than 48h.');
+      })
+      .catch((e) => console.warn('Cleanup skipped:', e && (e.code || e.message)));
+  }
+
   function startQueue(){
     if (queueRef) return;
+    cleanupOld();
     const ref = db.ref('requests');
     queueRef = ref;
 
