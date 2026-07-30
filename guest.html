@@ -258,7 +258,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script>
+  // Public reCAPTCHA v3 site key for App Check. This belongs in the page
+  // source; the matching secret key lives only in the Firebase Console.
+  const RECAPTCHA_SITE_KEY = "6Lc0VWwtAAAAAH_TPLUbDocEpUwQ7v6ryqNpB_B1";
+
   const firebaseConfig = {
     apiKey: "AIzaSyBcGSMD9MCmSml8epSDbCnkykyk1wW-w6E",
     authDomain: "djozmen-53d67.firebaseapp.com",
@@ -280,6 +285,13 @@
   if (!isPlaceholder){
     try{
       firebase.initializeApp(firebaseConfig);
+
+      // App Check must be activated before any other Firebase call.
+      if (firebase.appCheck && RECAPTCHA_SITE_KEY){
+        try{ firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true); }
+        catch(e){ console.warn('App Check not active:', e && e.message); }
+      }
+
       db = firebase.database();
       firebaseReady = true;
 
