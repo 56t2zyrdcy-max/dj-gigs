@@ -118,12 +118,29 @@
     display:block; font-family:'JetBrains Mono', monospace; font-size:11px;
     letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:10px;
   }
-  #songInput{
+  #songInput, #roomInput{
     width:100%; background:rgba(245,240,255,0.06); border:1px solid rgba(245,240,255,0.15);
     border-radius:10px; padding:14px 14px; font-size:16px; color:var(--foam); font-family:'Inter', sans-serif;
   }
-  #songInput:focus{ outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
-  #songInput::placeholder{color:var(--muted);}
+  #songInput:focus, #roomInput:focus{ outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
+  #songInput::placeholder, #roomInput::placeholder{color:var(--muted);}
+  #roomInput{ font-family:'JetBrains Mono', monospace; letter-spacing:2px; max-width:180px; }
+  .field{ margin-bottom:18px; }
+  .field:last-child{ margin-bottom:0; }
+  .hint{ font-size:11.5px; color:var(--muted); margin:8px 0 0; line-height:1.45; }
+
+  /* ---- cooldown notice ---- */
+  .cooldown{
+    display:none; align-items:center; gap:10px;
+    background:rgba(255,200,87,0.10); border:1px solid rgba(255,200,87,0.38);
+    border-radius:12px; padding:12px 14px; margin-bottom:12px;
+    font-size:12.5px; line-height:1.5; color:var(--foam);
+  }
+  .cooldown.show{ display:flex; }
+  .cooldown .clock{
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:17px;
+    color:var(--gold); white-space:nowrap;
+  }
 
   .perforation{ position:relative; height:0; border-top:2px dashed rgba(245,240,255,0.2); }
   .perforation::before, .perforation::after{
@@ -213,8 +230,15 @@
 
   <form class="ticket" id="requestForm">
     <div class="ticket-top">
-      <label for="songInput">Artist &amp; Song</label>
-      <input id="songInput" name="songInput" placeholder="e.g. Fred again.. – Marea" autocomplete="off" required>
+      <div class="field">
+        <label for="songInput">Artist &amp; Song</label>
+        <input id="songInput" name="songInput" placeholder="e.g. Fred again.. – Marea" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label for="roomInput">Cabin no · Kabinennummer</label>
+        <input id="roomInput" name="roomInput" placeholder="8214" autocomplete="off" maxlength="8" inputmode="text" required>
+        <p class="hint">One free request per cabin every 30 minutes. Tipped requests always go through.<br>Pro Kabine eine kostenlose Anfrage alle 30 Minuten. Anfragen mit Trinkgeld gehen immer durch.</p>
+      </div>
     </div>
 
     <div class="perforation" aria-hidden="true"></div>
@@ -237,6 +261,10 @@
   </form>
 
   <div class="actions">
+    <div class="cooldown" id="cooldownBox">
+      <span class="clock" id="cooldownClock">30:00</span>
+      <span id="cooldownText">Your cabin already sent a free request. You can send the next one when the clock runs out — or add a tip to send right away.</span>
+    </div>
     <div id="paypal-button-container"></div>
     <button type="button" class="free-btn" id="sendFreeBtn">Send request without a tip (Ohne Trinkgeld senden)</button>
     <p id="statusMsg" role="status"></p>
@@ -344,8 +372,159 @@
   const paypalContainer = document.getElementById('paypal-button-container');
   const configWarning = document.getElementById('configWarning');
   const tonearm = document.getElementById('tonearm');
+  const roomInput = document.getElementById('roomInput');
+  const cooldownBox = document.getElementById('cooldownBox');
+  const cooldownClock = document.getElementById('cooldownClock');
 
   let selectedAmount = 0;
+
+  // ===================== ANTI-SPAM SETTINGS =====================
+  // One free request per cabin per COOLDOWN_MS. Paid requests are never
+  // blocked by the cooldown — a tip always jumps the line.
+  const COOLDOWN_MS = 30 * 60 * 1000;      // 30 minutes
+  // The same song can't be requested twice within this window (one night).
+  const DUP_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
+  const LS_ROOMS = 'djozmen.rooms';
+  const LS_SONGS = 'djozmen.songs';
+  // ==============================================================
+
+  // Firebase keys may not contain . # $ [ ] / — both helpers strip
+  // everything that isn't a letter or a digit, so "8214 B" and "8214b"
+  // count as the same cabin.
+  function roomKey(v){
+    return String(v || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 12);
+  }
+  function songKey(v){
+    return String(v || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 60);
+  }
+
+  function currentRoom(){ return roomInput.value.trim(); }
+
+  // ---- local (per-device) memory, used as a fallback whenever the
+  // database can't be reached or refuses the guardrail read ----
+  function lsGet(key){
+    try{ return JSON.parse(localStorage.getItem(key) || '{}'); }
+    catch(e){ return {}; }
+  }
+  function lsSet(key, obj){
+    try{ localStorage.setItem(key, JSON.stringify(obj)); }catch(e){}
+  }
+  function lsPrune(obj, maxAge){
+    const now = Date.now();
+    Object.keys(obj).forEach(k => { if (now - obj[k] > maxAge) delete obj[k]; });
+    return obj;
+  }
+
+  // ---- shared guardrail node in Firebase, so the limit follows the
+  // cabin across phones and private tabs, not just this browser ----
+  async function guardRead(path){
+    if (!firebaseReady || !db) return undefined;   // undefined = unknown
+    try{
+      await authReady;
+      const snap = await db.ref(path).once('value');
+      return snap.val();                            // null = nothing stored
+    }catch(e){
+      console.warn('Guardrail read unavailable:', e && e.message);
+      return undefined;
+    }
+  }
+  async function guardWrite(room, song, ts){
+    const rk = roomKey(room), sk = songKey(song);
+    const rooms = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4);
+    const songs = lsPrune(lsGet(LS_SONGS), DUP_WINDOW_MS);
+    if (rk) { rooms[rk] = ts; lsSet(LS_ROOMS, rooms); }
+    if (sk) { songs[sk] = ts; lsSet(LS_SONGS, songs); }
+    if (!firebaseReady || !db) return;
+    try{
+      const updates = {};
+      if (rk) updates['guardrail/rooms/' + rk] = ts;
+      if (sk) updates['guardrail/songs/' + sk] = ts;
+      await db.ref().update(updates);
+    }catch(e){
+      console.warn('Guardrail write unavailable:', e && e.message);
+    }
+  }
+
+  function fmtLeft(ms){
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(total / 60), s = total % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  let cooldownTimer = null;
+  function showCooldown(untilTs){
+    clearInterval(cooldownTimer);
+    const tick = () => {
+      const left = untilTs - Date.now();
+      if (left <= 0){
+        clearInterval(cooldownTimer);
+        cooldownBox.classList.remove('show');
+        sendFreeBtn.disabled = false;
+        setStatus('You can send a new request now 🎧', 'success');
+        return;
+      }
+      cooldownClock.textContent = fmtLeft(left);
+    };
+    cooldownBox.classList.add('show');
+    sendFreeBtn.disabled = true;
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+  }
+  function clearCooldownUi(){
+    clearInterval(cooldownTimer);
+    cooldownBox.classList.remove('show');
+    sendFreeBtn.disabled = false;
+  }
+
+  // Returns the timestamp of this cabin's last request, preferring the
+  // shared database value and falling back to this device's memory.
+  async function lastRequestAt(room){
+    const rk = roomKey(room);
+    if (!rk) return 0;
+    const remote = await guardRead('guardrail/rooms/' + rk);
+    const local = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4)[rk] || 0;
+    return Math.max(Number(remote) || 0, local);
+  }
+  async function lastSongAt(song){
+    const sk = songKey(song);
+    if (!sk) return 0;
+    const remote = await guardRead('guardrail/songs/' + sk);
+    const local = lsPrune(lsGet(LS_SONGS), DUP_WINDOW_MS)[sk] || 0;
+    return Math.max(Number(remote) || 0, local);
+  }
+
+  // The single gate every send path goes through. `isPaid` requests skip
+  // the cooldown but still can't duplicate a song that's already queued.
+  async function passesGuardrail(isPaid){
+    const song = currentSong(), room = currentRoom();
+
+    const songTs = await lastSongAt(song);
+    if (songTs && Date.now() - songTs < DUP_WINDOW_MS){
+      setStatus('That song is already in tonight’s queue. Pick another one. (Dieser Song steht schon in der Liste.)', 'error');
+      songInput.focus();
+      songInput.select();
+      return false;
+    }
+
+    if (isPaid) return true;
+
+    const roomTs = await lastRequestAt(room);
+    const left = roomTs + COOLDOWN_MS - Date.now();
+    if (roomTs && left > 0){
+      showCooldown(roomTs + COOLDOWN_MS);
+      setStatus('Cabin ' + room + ' already has a free request in the queue — ' + fmtLeft(left) + ' left, or add a tip to send now.', 'error');
+      return false;
+    }
+    clearCooldownUi();
+    return true;
+  }
 
   // Show a friendly banner instead of letting the page silently fail
   // when Firebase and/or PayPal haven't been configured yet.
@@ -405,6 +584,11 @@
       songInput.focus();
       return false;
     }
+    if (!roomKey(currentRoom())){
+      setStatus('Add your cabin number so the DJ knows who asked. (Bitte Kabinennummer angeben.)', 'error');
+      roomInput.focus();
+      return false;
+    }
     return true;
   }
 
@@ -424,6 +608,7 @@
     }
     const record = {
       song: currentSong(),
+      room: currentRoom().toUpperCase().slice(0, 8),
       amount: amount || 0,
       tipStatus,            // 'paid' | 'none'
       createdAt: Date.now(),
@@ -444,6 +629,8 @@
 
   function resetForm(){
     songInput.value = '';
+    // The cabin number stays put — the same guest usually asks again later,
+    // and it keeps the cooldown attached to the right cabin.
     customAmt.value = '';
     customAmt.hidden = true;
     tipButtons.forEach(b => b.classList.remove('active'));
@@ -452,14 +639,25 @@
 
   sendFreeBtn.addEventListener('click', async () => {
     if (!validateSong()) return;
+    const song = currentSong(), room = currentRoom();
     sendFreeBtn.disabled = true;
+    setStatus('Checking…');
+    if (!(await passesGuardrail(false))){
+      // passesGuardrail already explained why and, for a cooldown,
+      // left the button disabled with a live countdown.
+      if (!cooldownBox.classList.contains('show')) sendFreeBtn.disabled = false;
+      return;
+    }
     setStatus('Sending your request…');
     const ok = await saveRequest('none', 0, null);
     sendFreeBtn.disabled = false;
     if (ok){
+      const now = Date.now();
+      await guardWrite(room, song, now);
       setStatus('Request sent. The DJ has it now 🎧', 'success');
       dropNeedle();
       resetForm();
+      showCooldown(now + COOLDOWN_MS);
     } else {
       setStatus(firebaseReady ? 'Something went wrong. Try again.' : 'Setup isn\'t finished yet — this request could not be saved.', 'error');
     }
@@ -469,12 +667,15 @@
     if (!window.paypal) return;
     paypal.Buttons({
       style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'pay' },
-      createOrder: function(data, actions){
-        if (!validateSong()) { return Promise.reject('missing-song'); }
+      createOrder: async function(data, actions){
+        if (!validateSong()) { throw new Error('missing-song'); }
         if (!selectedAmount || selectedAmount <= 0){
           setStatus('Choose a tip amount, or send without a tip.', 'error');
-          return Promise.reject('missing-amount');
+          throw new Error('missing-amount');
         }
+        // A tip skips the 30-minute cooldown, but nobody pays for a song
+        // that is already in the queue.
+        if (!(await passesGuardrail(true))){ throw new Error('duplicate-song'); }
         return actions.order.create({
           purchase_units: [{
             description: 'Song request tip: ' + currentSong(),
@@ -483,10 +684,14 @@
         });
       },
       onApprove: function(data, actions){
+        const song = currentSong();
         return actions.order.capture().then(async function(){
           setStatus('Processing…');
           const ok = await saveRequest('paid', selectedAmount, data.orderID);
           if (ok){
+            // Only the song index is stamped — a paid request must never
+            // start a cooldown on the guest's own cabin.
+            await guardWrite(null, song, Date.now());
             setStatus('Tip received — request sent 🎉', 'success');
             dropNeedle();
             resetForm();
@@ -515,6 +720,30 @@
     paypalContainer.innerHTML =
       '<p style="color:#9C8FBF;font-size:12px;text-align:center;">PayPal isn\'t configured yet — set your client ID in the code.</p>';
   }
+
+  // Remember the cabin on this device and re-check the cooldown whenever it
+  // changes, so a blocked guest sees the countdown before typing anything.
+  const savedRoom = (function(){ try{ return localStorage.getItem('djozmen.room') || ''; }catch(e){ return ''; } })();
+  if (savedRoom) roomInput.value = savedRoom;
+
+  let roomCheckToken = 0;
+  async function refreshCooldownFor(room){
+    const token = ++roomCheckToken;
+    if (!roomKey(room)){ clearCooldownUi(); return; }
+    try{ localStorage.setItem('djozmen.room', room); }catch(e){}
+    const ts = await lastRequestAt(room);
+    if (token !== roomCheckToken) return;   // a newer check already ran
+    const until = ts + COOLDOWN_MS;
+    if (ts && until > Date.now()){
+      showCooldown(until);
+      setStatus('');   // the countdown box already explains the wait
+    } else {
+      clearCooldownUi();
+    }
+  }
+  roomInput.addEventListener('change', () => refreshCooldownFor(currentRoom()));
+  roomInput.addEventListener('blur', () => refreshCooldownFor(currentRoom()));
+  if (savedRoom) refreshCooldownFor(savedRoom);
 
   setAmount(0);
 })();

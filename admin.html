@@ -90,6 +90,12 @@
   .req-main{ flex:1; min-width:0; }
   .req-song{ font-size:16px; font-weight:600; margin:0 0 4px; word-break:break-word; }
   .req-meta{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--slate); }
+  .cabin{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700;
+    padding:1px 7px; border-radius:6px; margin-right:6px;
+    background:rgba(124,147,163,0.18); color:inherit;
+  }
+  .cabin.repeat{ background:rgba(255,88,88,0.18); color:#FF7A7A; }
 
   .req-tip{
     font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:22px;
@@ -322,7 +328,21 @@
     queueEl.innerHTML = '';
     emptyState.hidden = filtered.length > 0;
 
+    // How many still-unplayed requests each cabin has in the queue right
+    // now — anything above one gets flagged so repeat senders are obvious.
+    const cabinCount = {};
+    list.forEach(([, r]) => {
+      if (r.played || !r.room) return;
+      const k = String(r.room).toUpperCase();
+      cabinCount[k] = (cabinCount[k] || 0) + 1;
+    });
+
     filtered.forEach(([id, r]) => {
+      const cabin = r.room ? String(r.room).toUpperCase() : '';
+      const repeats = cabin ? (cabinCount[cabin] || 0) : 0;
+      const cabinChip = cabin
+        ? `<span class="cabin${repeats > 1 ? ' repeat' : ''}">Cabin ${escapeHtml(cabin)}${repeats > 1 ? ' ×' + repeats : ''}</span>`
+        : '';
       const card = document.createElement('div');
       card.className = 'req' + (r.played ? ' played' : '');
       card.innerHTML = `
@@ -331,7 +351,7 @@
         </div>
         <div class="req-main">
           <p class="req-song">${escapeHtml(r.song)}</p>
-          <p class="req-meta">${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
+          <p class="req-meta">${cabinChip}${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
         </div>
         <div class="req-actions">
           <button class="icon-btn ${r.played ? 'done' : ''}" data-action="toggle" data-id="${id}" title="${r.played ? 'Mark unplayed' : 'Mark played'}">${r.played ? '✓' : '▶'}</button>
@@ -408,9 +428,30 @@
       .catch((e) => console.warn('Cleanup skipped:', e && (e.code || e.message)));
   }
 
+  // The guest page stamps two tiny nodes to enforce the per-cabin cooldown
+  // and the duplicate-song block. They are worthless after the night ends,
+  // so sweep anything older than 12 hours.
+  function cleanupGuardrail(){
+    const cutoff = Date.now() - 12 * 60 * 60 * 1000;
+    db.ref('guardrail').once('value')
+      .then((snap) => {
+        const updates = {};
+        ['rooms', 'songs'].forEach((bucket) => {
+          const node = snap.child(bucket);
+          node.forEach((child) => {
+            if (Number(child.val()) < cutoff) updates['guardrail/' + bucket + '/' + child.key] = null;
+          });
+        });
+        const n = Object.keys(updates).length;
+        if (n) return db.ref().update(updates).then(() => console.log('Cleanup: cleared ' + n + ' guardrail entr(ies).'));
+      })
+      .catch((e) => console.warn('Guardrail cleanup skipped:', e && (e.code || e.message)));
+  }
+
   function startQueue(){
     if (queueRef) return;
     cleanupOld();
+    cleanupGuardrail();
     const ref = db.ref('requests');
     queueRef = ref;
 
