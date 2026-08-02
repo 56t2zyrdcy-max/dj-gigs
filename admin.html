@@ -119,6 +119,34 @@
   .empty{
     text-align:center; padding:60px 20px; color:var(--slate);
   }
+
+  /* ---- past-requests history ---- */
+  .history-wrap{ margin-top:26px; }
+  #historyToggle{
+    width:100%; font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:1px;
+    padding:13px 16px; border-radius:12px; border:1px solid rgba(201,161,92,0.4);
+    background:transparent; color:var(--brass); cursor:pointer; text-align:center;
+  }
+  #historyToggle:hover{ border-color:var(--coral); color:var(--foam); }
+  #historyToggle:focus-visible{ outline:2px solid var(--coral); outline-offset:2px; }
+  .history-stats{
+    font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--slate);
+    margin:14px 2px 4px; letter-spacing:1px;
+  }
+  .hist-day{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:2px;
+    color:var(--coral); text-transform:uppercase; margin:18px 2px 8px;
+  }
+  .hist-row{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(18,52,67,0.55); border:1px solid rgba(201,161,92,0.15);
+    border-radius:9px; padding:8px 12px; margin-bottom:6px; font-size:13px;
+  }
+  .hist-time{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--slate); min-width:44px; }
+  .hist-song{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hist-tip{ font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:700; min-width:38px; text-align:right; }
+  .hist-tip.paid{ color:var(--coral); }
+  .hist-tip.none{ color:var(--slate); }
   .empty .big{ font-family:'Big Shoulders Display', sans-serif; font-size:28px; color:var(--foam); margin-bottom:6px; text-transform:uppercase; }
 
   .config-warning{
@@ -208,6 +236,14 @@
   <div class="empty" id="emptyState" hidden>
     <div class="big">No requests yet</div>
     <div>New song requests will appear here the moment a guest sends one.</div>
+  </div>
+
+  <div class="history-wrap">
+    <button id="historyToggle" type="button">▸ Past requests — last 30 days · <span id="historyCount">0</span></button>
+    <div id="historySection" hidden>
+      <div class="history-stats" id="historyStats"></div>
+      <div id="historyList"></div>
+    </div>
   </div>
 </div>
 
@@ -316,6 +352,15 @@
     }catch(e){ console.warn('Beep failed', e); }
   }
 
+  document.getElementById('historyToggle').addEventListener('click', () => {
+    historyOpen = !historyOpen;
+    document.getElementById('historySection').hidden = !historyOpen;
+    const n = document.getElementById('historyCount').textContent;
+    document.getElementById('historyToggle').innerHTML =
+      (historyOpen ? '▾' : '▸') + ' Past requests — last 30 days · <span id="historyCount">' + n + '</span>';
+    render();
+  });
+
   soundToggle.addEventListener('click', () => {
     soundOn = !soundOn;
     soundToggle.textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off';
@@ -339,9 +384,17 @@
     return hrs + 'h ' + (mins % 60) + 'm ago';
   }
 
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  let historyOpen = false;
+
   function render(){
-    const list = Object.entries(requests)
+    const nowTs = Date.now();
+    const all = Object.entries(requests)
       .sort((a,b) => b[1].createdAt - a[1].createdAt);
+    // The live queue shows the last 24 hours; everything older lives in
+    // the collapsible history below.
+    const list = all.filter(([, r]) => nowTs - r.createdAt < DAY_MS);
+    const history = all.filter(([, r]) => nowTs - r.createdAt >= DAY_MS);
 
     const filtered = list.filter(([id, r]) => {
       if (filter === 'unplayed') return !r.played;
@@ -385,11 +438,41 @@
       queueEl.appendChild(card);
     });
 
-    // Stats
+    // Stats — tonight only
     const count = list.length;
     const tips = list.reduce((sum, [id, r]) => sum + (r.tipStatus === 'paid' ? Number(r.amount) : 0), 0);
     statCount.textContent = count;
     statTips.textContent = '€' + tips;
+
+    // History
+    document.getElementById('historyCount').textContent = history.length;
+    if (historyOpen) renderHistory(history);
+  }
+
+  function renderHistory(history){
+    const listEl = document.getElementById('historyList');
+    const statsEl = document.getElementById('historyStats');
+    const tips = history.reduce((sum, [, r]) => sum + (r.tipStatus === 'paid' ? Number(r.amount) : 0), 0);
+    statsEl.textContent = history.length + ' requests · €' + tips + ' tips';
+    if (!history.length){
+      listEl.innerHTML = '<div class="history-stats">Nothing older than 24 hours yet.</div>';
+      return;
+    }
+    let html = '', lastDay = '';
+    history.forEach(([id, r]) => {
+      const d = new Date(r.createdAt);
+      const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' });
+      if (day !== lastDay){ html += '<div class="hist-day">' + day + '</div>'; lastDay = day; }
+      const time = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      const cabin = r.room ? ' <span style="color:var(--slate)">· ' + escapeHtml(String(r.room)) + '</span>' : '';
+      html += '<div class="hist-row">'
+        + '<span class="hist-time">' + time + '</span>'
+        + '<span class="hist-song">' + escapeHtml(r.song || '') + cabin + '</span>'
+        + '<span class="hist-tip ' + (r.tipStatus === 'paid' ? 'paid' : 'none') + '">'
+        + (r.tipStatus === 'paid' ? '€' + Number(r.amount) : '—') + '</span>'
+        + '</div>';
+    });
+    listEl.innerHTML = html;
   }
 
   function escapeHtml(str){
@@ -479,11 +562,11 @@
     if (liveDot && liveDot.parentElement) liveDot.parentElement.classList.remove('offline');
   }
 
-  // Housekeeping: drop requests older than 48 hours whenever the DJ opens
-  // the panel. Paid requests are kept on purpose so the tip history stays
-  // intact — remove the tipStatus check below if you want those gone too.
+  // Housekeeping: drop requests older than 30 DAYS whenever the DJ opens
+  // the panel — that window feeds the "Past requests" history. Paid
+  // requests are kept forever so the tip history stays intact.
   function cleanupOld(){
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     db.ref('requests').orderByChild('createdAt').endAt(cutoff).once('value')
       .then((snap) => {
         let n = 0;
@@ -493,7 +576,7 @@
           db.ref('requests/' + child.key).remove();
           n++;
         });
-        if (n) console.log('Cleanup: removed ' + n + ' request(s) older than 48h.');
+        if (n) console.log('Cleanup: removed ' + n + ' request(s) older than 30 days.');
       })
       .catch((e) => console.warn('Cleanup skipped:', e && (e.code || e.message)));
   }
