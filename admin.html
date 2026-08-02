@@ -397,7 +397,7 @@
     const history = all.filter(([, r]) => nowTs - r.createdAt >= DAY_MS);
 
     const filtered = list.filter(([id, r]) => {
-      if (filter === 'unplayed') return !r.played;
+      if (filter === 'unplayed') return !r.played && !r.rejected;
       if (filter === 'paid') return r.tipStatus === 'paid';
       return true;
     });
@@ -420,18 +420,22 @@
       const cabinChip = cabin
         ? `<span class="cabin${repeats > 1 ? ' repeat' : ''}">Cabin ${escapeHtml(cabin)}${repeats > 1 ? ' ×' + repeats : ''}</span>`
         : '';
+      const rejectedChip = r.rejected
+        ? '<span class="cabin" style="background:rgba(255,88,88,0.18);color:#FF7A7A">🚫 not suitable — guest notified</span>'
+        : '';
       const card = document.createElement('div');
-      card.className = 'req' + (r.played ? ' played' : '');
+      card.className = 'req' + (r.played || r.rejected ? ' played' : '');
       card.innerHTML = `
         <div class="req-tip ${r.tipStatus === 'paid' ? 'paid' : 'none'}">
           ${r.tipStatus === 'paid' ? '€' + r.amount : '—'}
         </div>
         <div class="req-main">
           <p class="req-song">${escapeHtml(r.song)}</p>
-          <p class="req-meta">${cabinChip}${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
+          <p class="req-meta">${rejectedChip}${cabinChip}${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
         </div>
         <div class="req-actions">
           <button class="icon-btn ${r.played ? 'done' : ''}" data-action="toggle" data-id="${id}" title="${r.played ? 'Mark unplayed' : 'Mark played'}">${r.played ? '✓' : '▶'}</button>
+          <button class="icon-btn ${r.rejected ? 'done' : ''}" data-action="reject" data-id="${id}" title="${r.rejected ? 'Undo not-suitable' : 'Not suitable — notify guest'}">🚫</button>
           <button class="icon-btn" data-action="delete" data-id="${id}" title="Remove">✕</button>
         </div>
       `;
@@ -467,7 +471,7 @@
       const cabin = r.room ? ' <span style="color:var(--slate)">· ' + escapeHtml(String(r.room)) + '</span>' : '';
       html += '<div class="hist-row">'
         + '<span class="hist-time">' + time + '</span>'
-        + '<span class="hist-song">' + escapeHtml(r.song || '') + cabin + '</span>'
+        + '<span class="hist-song">' + (r.rejected ? '🚫 ' : '') + escapeHtml(r.song || '') + cabin + '</span>'
         + '<span class="hist-tip ' + (r.tipStatus === 'paid' ? 'paid' : 'none') + '">'
         + (r.tipStatus === 'paid' ? '€' + Number(r.amount) : '—') + '</span>'
         + '</div>';
@@ -488,6 +492,11 @@
     if (btn.dataset.action === 'toggle'){
       const current = requests[id];
       db.ref('requests/' + id + '/played').set(!current.played);
+    } else if (btn.dataset.action === 'reject'){
+      // Marks the request as not suitable. The guest's page listens to this
+      // flag and shows a polite notice in the guest's own language.
+      const current = requests[id];
+      db.ref('requests/' + id + '/rejected').set(current.rejected ? null : true);
     } else if (btn.dataset.action === 'delete'){
       // Two-tap delete. A single stray tap in a dark booth would otherwise
       // wipe a request with no undo, since it is gone from the database.

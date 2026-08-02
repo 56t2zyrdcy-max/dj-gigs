@@ -165,6 +165,14 @@
     font-size:12.5px; line-height:1.5; color:var(--foam);
   }
   .cooldown.show{ display:flex; }
+  .cooldown.reject{
+    background:rgba(255,46,136,0.10); border-color:rgba(255,46,136,0.5);
+  }
+  .reject-x{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:15px; padding:2px 4px; line-height:1; flex-shrink:0;
+  }
+  .reject-x:hover{ color:var(--foam); }
   .cooldown .clock{
     font-family:'JetBrains Mono', monospace; font-weight:700; font-size:17px;
     color:var(--gold); white-space:nowrap;
@@ -310,6 +318,10 @@
     <div class="cooldown" id="cooldownBox">
       <span class="clock" id="cooldownClock">30:00</span>
       <span id="cooldownText">This phone or cabin already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.</span>
+    </div>
+    <div class="cooldown reject" id="rejectBox" role="alert">
+      <span id="rejectText"></span>
+      <button type="button" id="rejectClose" class="reject-x" aria-label="Close">✕</button>
     </div>
     <div id="paypal-button-container"></div>
     <button type="button" class="free-btn" id="sendFreeBtn">Anfrage senden</button>
@@ -467,6 +479,7 @@
       paidSaveFail: 'Zahlung war erfolgreich, aber die Anfrage wurde nicht gespeichert. Zeig diesen Bildschirm dem DJ.',
       payFail: 'Zahlung fehlgeschlagen. Versuch es nochmal oder sende ohne Trinkgeld.',
       payCancel: 'Zahlung abgebrochen.',
+      rejected: 'Sorry — „{song}“ passt heute leider nicht ins Set oder ist nicht dabei. Wünsch dir gern einen anderen Song, deine Wartezeit wurde zurückgesetzt.',
       canSendNow: 'Du kannst jetzt eine neue Anfrage senden 🎧'
     },
     en: {
@@ -490,6 +503,7 @@
       paidSaveFail: 'Payment went through, but saving the request failed. Show this screen to the DJ.',
       payFail: 'Payment failed. Try again or send without a tip.',
       payCancel: 'Payment cancelled.',
+      rejected: 'Sorry — "{song}" doesn\'t fit tonight\'s set or isn\'t available. Feel free to pick another song — your waiting time has been reset.',
       canSendNow: 'You can send a new request now 🎧'
     },
     tr: {
@@ -513,6 +527,7 @@
       paidSaveFail: 'Ödeme geçti ama istek kaydedilemedi. Bu ekranı DJ\'e göster.',
       payFail: 'Ödeme başarısız. Tekrar dene ya da bahşişsiz gönder.',
       payCancel: 'Ödeme iptal edildi.',
+      rejected: 'Üzgünüm — "{song}" bu geceki sete uymuyor ya da elimde yok. Başka bir şarkı seçebilirsin, bekleme süren sıfırlandı.',
       canSendNow: 'Şimdi yeni bir istek gönderebilirsin 🎧'
     },
     es: {
@@ -536,6 +551,7 @@
       paidSaveFail: 'El pago se realizó, pero la petición no se guardó. Muestra esta pantalla al DJ.',
       payFail: 'El pago falló. Inténtalo de nuevo o envía sin propina.',
       payCancel: 'Pago cancelado.',
+      rejected: 'Lo siento — "{song}" no encaja en la sesión de esta noche o no está disponible. Elige otra canción: tu tiempo de espera se ha reiniciado.',
       canSendNow: 'Ya puedes enviar una nueva petición 🎧'
     },
     nl: {
@@ -559,6 +575,7 @@
       paidSaveFail: 'De betaling is gelukt, maar het verzoekje is niet opgeslagen. Laat dit scherm aan de DJ zien.',
       payFail: 'Betaling mislukt. Probeer opnieuw of stuur zonder fooi.',
       payCancel: 'Betaling geannuleerd.',
+      rejected: 'Sorry — "{song}" past niet in de set van vanavond of is niet beschikbaar. Kies gerust een ander nummer — je wachttijd is gereset.',
       canSendNow: 'Je kunt nu een nieuw verzoekje sturen 🎧'
     }
   };
@@ -679,6 +696,53 @@
       console.warn('Guardrail write unavailable:', e && e.message);
     }
   }
+
+  // ---- "can't play this one" notifications ------------------------
+  // Request ids sent from THIS phone are remembered for 24h. The page
+  // listens to each one's `rejected` flag; when the DJ hits 🚫 the notice
+  // below appears in the guest's own language and the 30-minute wait is
+  // lifted so they can wish for another song right away.
+  const LS_MYREQS = 'djozmen.myreqs';
+  function loadMyReqs(){
+    const obj = lsGet(LS_MYREQS);
+    const now = Date.now();
+    Object.keys(obj).forEach(k => {
+      if (!obj[k] || !obj[k].ts || now - obj[k].ts > 24 * 60 * 60 * 1000) delete obj[k];
+    });
+    return obj;
+  }
+  function watchMyRequest(id, song){
+    if (!id || typeof id !== 'string') return;
+    const reqs = loadMyReqs();
+    reqs[id] = reqs[id] || { song: song, ts: Date.now(), seen: false };
+    lsSet(LS_MYREQS, reqs);
+    attachRejectWatch(id, reqs[id]);
+  }
+  function attachRejectWatch(id, meta){
+    if (!firebaseReady || !db) return;
+    db.ref('requests/' + id + '/rejected').on('value', (snap) => {
+      if (snap.val() !== true) return;
+      const reqs = loadMyReqs();
+      if (reqs[id] && reqs[id].seen) return;
+      if (reqs[id]){ reqs[id].seen = true; lsSet(LS_MYREQS, reqs); }
+      showRejected(meta.song || (reqs[id] && reqs[id].song) || '');
+    }, (err) => {
+      console.warn('Reject watch unavailable:', err && err.message);
+    });
+  }
+  async function showRejected(song){
+    document.getElementById('rejectText').textContent = T().rejected.replace('{song}', song);
+    document.getElementById('rejectBox').classList.add('show');
+    // The DJ said no — the guest should not sit out the 30 minutes.
+    clearCooldownUi();
+    lsSet(LS_DEVICE, {});
+    try{
+      await authReady;
+      const dk = deviceKey();
+      if (dk && firebaseReady && db) await db.ref('guardrail/devices/' + dk).remove();
+    }catch(e){}
+  }
+  // -----------------------------------------------------------------
 
   function fmtLeft(ms){
     const total = Math.max(0, Math.ceil(ms / 1000));
@@ -839,10 +903,16 @@
     // Only send paypalOrderId when there really is one — the rules require
     // a paid request to carry its PayPal order id so the DJ can verify it.
     if (paypalOrderId) record.paypalOrderId = paypalOrderId;
+    // The guest's anonymous id lets THIS phone read the status of its own
+    // request later — that's how the "can't play this one" notice arrives.
+    try{
+      const u = firebase.auth().currentUser;
+      if (u && u.uid) record.uid = u.uid;
+    }catch(e){}
 
     try{
-      await db.ref('requests').push(record);
-      return true;
+      const ref = await db.ref('requests').push(record);
+      return (ref && ref.key) || true;
     }catch(err){
       console.error('Firebase error:', err);
       return false;
@@ -874,6 +944,7 @@
     const ok = await saveRequest('none', 0, null);
     sendFreeBtn.disabled = false;
     if (ok){
+      if (typeof ok === 'string') watchMyRequest(ok, song);
       const now = Date.now();
       await guardWrite(true, song, now);
       setStatus(T().sent, 'success');
@@ -916,6 +987,7 @@
           setStatus(T().processing);
           const ok = await saveRequest('paid', selectedAmount, data.orderID);
           if (ok){
+            if (typeof ok === 'string') watchMyRequest(ok, song);
             // Only the song index is stamped — a paid request must never
             // start a cooldown on the guest's own cabin.
             await guardWrite(false, song, Date.now());
@@ -955,6 +1027,18 @@
       setStatus('');
     }
   })();
+
+  // Re-attach watches for requests sent earlier from this phone, so a
+  // guest who reopens the page still sees a pending "can't play" notice.
+  (async function(){
+    await authReady;
+    const reqs = loadMyReqs();
+    Object.keys(reqs).forEach(id => { if (!reqs[id].seen) attachRejectWatch(id, reqs[id]); });
+  })();
+
+  document.getElementById('rejectClose').addEventListener('click', () => {
+    document.getElementById('rejectBox').classList.remove('show');
+  });
 
   // Language switcher
   document.querySelectorAll('.lang').forEach(btn => {
