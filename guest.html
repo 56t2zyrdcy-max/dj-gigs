@@ -99,6 +99,14 @@
     display:inline-block; width:6px;height:6px; border-radius:50%;
     background:var(--magenta); margin-right:6px; animation:pulse 1.6s ease-in-out infinite;
   }
+  .langbar{ display:flex; justify-content:center; gap:8px; margin:0 0 18px; }
+  .lang{
+    width:38px; height:26px; padding:0; border-radius:6px; overflow:hidden; cursor:pointer;
+    border:1px solid rgba(245,240,255,0.3); background:none; opacity:.5; transition:all .15s ease;
+  }
+  .lang svg{ width:100%; height:100%; display:block; }
+  .lang:hover{ opacity:.85; }
+  .lang.active{ opacity:1; outline:2px solid var(--cyan); outline-offset:1px; }
   .social{ display:flex; align-items:center; justify-content:center; gap:10px; margin:2px 0 12px; }
   .social-cap{
     font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:3px;
@@ -139,13 +147,12 @@
     display:block; font-family:'JetBrains Mono', monospace; font-size:11px;
     letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:10px;
   }
-  #songInput, #roomInput{
+  #songInput{
     width:100%; background:rgba(245,240,255,0.06); border:1px solid rgba(245,240,255,0.15);
     border-radius:10px; padding:14px 14px; font-size:16px; color:var(--foam); font-family:'Inter', sans-serif;
   }
-  #songInput:focus, #roomInput:focus{ outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
-  #songInput::placeholder, #roomInput::placeholder{color:var(--muted);}
-  #roomInput{ font-family:'JetBrains Mono', monospace; letter-spacing:2px; max-width:180px; }
+  #songInput:focus{ outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
+  #songInput::placeholder{color:var(--muted);}
   .field{ margin-bottom:18px; }
   .field:last-child{ margin-bottom:0; }
   .hint{ font-size:11.5px; color:var(--muted); margin:8px 0 0; line-height:1.45; }
@@ -230,6 +237,12 @@
 <div class="stage-lights" aria-hidden="true"><span></span><span></span></div>
 
 <div class="app">
+  <div class="langbar" role="group" aria-label="Sprache / Language / Dil / Язык">
+    <button type="button" class="lang" data-lang="de" aria-label="Deutsch"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#000"/><rect y="13.3" width="60" height="26.7" fill="#DD0000"/><rect y="26.6" width="60" height="13.4" fill="#FFCE00"/></svg></button>
+    <button type="button" class="lang" data-lang="en" aria-label="English"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#012169"/><path d="M0,0 60,40 M60,0 0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 60,40 M60,0 0,40" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="12"/><path d="M30,0 V40 M0,20 H60" stroke="#C8102E" stroke-width="7"/></svg></button>
+    <button type="button" class="lang" data-lang="tr" aria-label="Türkçe"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#E30A17"/><circle cx="24" cy="20" r="10" fill="#fff"/><circle cx="26.5" cy="20" r="8" fill="#E30A17"/><polygon points="38,16 39,18.6 41.8,18.8 39.6,20.6 40.4,23.2 38,21.7 35.6,23.2 36.4,20.6 34.2,18.8 37,18.6" fill="#fff"/></svg></button>
+    <button type="button" class="lang" data-lang="ru" aria-label="Русский"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#fff"/><rect y="13.3" width="60" height="26.7" fill="#0039A6"/><rect y="26.6" width="60" height="13.4" fill="#D52B1E"/></svg></button>
+  </div>
   <div class="deck">
     <div class="turntable" aria-hidden="true">
       <div class="vinyl">
@@ -256,10 +269,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.5 15.6V8.4L15.8 12z"/></svg>
       </a>
     </div>
-    <p class="sub">Tell the DJ what to play next. Tip if you want it moved up.</p>
-    <p class="sub">Sag dem DJ, was als Nächstes laufen soll. Mit Trinkgeld rückt dein Song nach vorn.</p>
-    <p class="note">Tonight's requests must fit the AIDA HEUTE concept — songs outside that theme won't be played.</p>
-    <p class="note">Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen — Songs außerhalb dieses Themas werden nicht gespielt.</p>
+    <p class="sub" id="subLine">Sag dem DJ, was als Nächstes laufen soll.</p>
+    <p class="note" id="noteLine">Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen.</p>
   </div>
 
   <div id="configWarning" class="config-warning" hidden>
@@ -269,20 +280,16 @@
   <form class="ticket" id="requestForm">
     <div class="ticket-top">
       <div class="field">
-        <label for="songInput">Artist &amp; Song</label>
-        <input id="songInput" name="songInput" placeholder="e.g. Fred again.. – Marea" autocomplete="off" required>
-      </div>
-      <div class="field">
-        <label for="roomInput">Cabin no · Kabinennummer</label>
-        <input id="roomInput" name="roomInput" placeholder="8214" autocomplete="off" maxlength="8" inputmode="text" required>
-        <p class="hint">One free request per cabin &amp; phone every 30 minutes. Tipped requests (min €10) always go through.<br>Pro Kabine &amp; Handy eine kostenlose Anfrage alle 30 Minuten. Anfragen mit Trinkgeld (min. €10) gehen immer durch.</p>
+        <label for="songInput" id="songLabel">Artist &amp; Song</label>
+        <input id="songInput" name="songInput" placeholder="z. B. Fred again.. – Marea" autocomplete="off" required>
+        <p class="hint" id="hintLine">Alle 30 Minuten eine kostenlose Anfrage. Mit Trinkgeld geht dein Song sofort durch.</p>
       </div>
     </div>
 
     <div class="perforation" aria-hidden="true"></div>
 
     <div class="ticket-bottom">
-      <label>Add a tip (optional)</label>
+      <label id="tipLabel">Add a tip (optional)</label>
       <div class="tip-grid" role="group" aria-label="Tip amount">
         <button type="button" class="tip-btn" data-amt="0">€0</button>
         <button type="button" class="tip-btn" data-amt="10">€10</button>
@@ -292,7 +299,7 @@
       <input type="number" id="customAmt" min="10" step="1" placeholder="€ amount — min €10" hidden>
 
       <div class="stamp-row">
-        <span class="stamp-label">Selected tip</span>
+        <span class="stamp-label" id="stampLabel">Selected tip</span>
         <span class="stamp" id="amountStamp">€0</span>
       </div>
     </div>
@@ -304,7 +311,7 @@
       <span id="cooldownText">This phone or cabin already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.</span>
     </div>
     <div id="paypal-button-container"></div>
-    <button type="button" class="free-btn" id="sendFreeBtn">Send request without a tip (Ohne Trinkgeld senden)</button>
+    <button type="button" class="free-btn" id="sendFreeBtn">Anfrage senden</button>
     <p id="statusMsg" role="status"></p>
   </div>
 </div>
@@ -410,11 +417,131 @@
   const paypalContainer = document.getElementById('paypal-button-container');
   const configWarning = document.getElementById('configWarning');
   const tonearm = document.getElementById('tonearm');
-  const roomInput = document.getElementById('roomInput');
   const cooldownBox = document.getElementById('cooldownBox');
   const cooldownClock = document.getElementById('cooldownClock');
 
   let selectedAmount = 0;
+
+  // ===================== LANGUAGES =====================
+  const I18N = {
+    de: {
+      sub: 'Wünsch dir deinen Song — ich leg ihn für dich auf.',
+      note: 'Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen — Songs außerhalb dieses Themas werden nicht gespielt.',
+      songLabel: 'Interpret & Song', songPh: 'z. B. Fred again.. – Marea',
+      hint: 'Alle 30 Minuten eine kostenlose Anfrage. Mit Trinkgeld geht dein Song sofort durch.',
+      tipLabel: 'Trinkgeld hinzufügen (optional)', custom: 'Anderer Betrag', customPh: '€ Betrag — min. €10',
+      selectedTip: 'Gewähltes Trinkgeld',
+      cooldownText: 'Dieses Handy hat schon eine kostenlose Anfrage gesendet. Wenn die Uhr abläuft, geht die nächste — oder sende mit Trinkgeld (min. €10) sofort.',
+      sendFree: 'Anfrage senden', sendFreeAlt: 'Oder ohne Trinkgeld senden',
+      errSong: 'Bitte zuerst Interpret und Songtitel eingeben.',
+      dupSong: 'Dieser Song steht schon in der Liste. Wähle einen anderen.',
+      cooldownMsg: 'Dieses Handy hat schon eine kostenlose Anfrage — noch {left}, oder sende mit Trinkgeld (min. €10) sofort.',
+      checking: 'Prüfe…', sending: 'Anfrage wird gesendet…', sent: 'Anfrage gesendet. Der DJ hat sie 🎧',
+      wrong: 'Etwas ist schiefgelaufen. Versuch es nochmal.',
+      setup: 'Die Einrichtung ist noch nicht fertig — die Anfrage konnte nicht gespeichert werden.',
+      chooseAmt: 'Wähle einen Trinkgeld-Betrag oder sende ohne Trinkgeld.',
+      minTip: 'Mindest-Trinkgeld ist €10.',
+      processing: 'Wird verarbeitet…', paidSent: 'Trinkgeld erhalten — Anfrage gesendet 🎉',
+      paidSaveFail: 'Zahlung war erfolgreich, aber die Anfrage wurde nicht gespeichert. Zeig diesen Bildschirm dem DJ.',
+      payFail: 'Zahlung fehlgeschlagen. Versuch es nochmal oder sende ohne Trinkgeld.',
+      payCancel: 'Zahlung abgebrochen.',
+      canSendNow: 'Du kannst jetzt eine neue Anfrage senden 🎧'
+    },
+    en: {
+      sub: "Wish for your song — I'll spin it for you.",
+      note: "Tonight's requests must fit the AIDA HEUTE concept — songs outside that theme won't be played.",
+      songLabel: 'Artist & Song', songPh: 'e.g. Fred again.. – Marea',
+      hint: 'One free request every 30 minutes. With a tip your song goes through right away.',
+      tipLabel: 'Add a tip (optional)', custom: 'Custom', customPh: '€ amount — min €10',
+      selectedTip: 'Selected tip',
+      cooldownText: 'This phone already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.',
+      sendFree: 'Send request', sendFreeAlt: 'Or send without a tip',
+      errSong: 'Add the artist and song name first.',
+      dupSong: "That song is already in tonight's queue. Pick another one.",
+      cooldownMsg: 'This phone already sent a free request — {left} left, or add a tip (min €10) to send now.',
+      checking: 'Checking…', sending: 'Sending your request…', sent: 'Request sent. The DJ has it now 🎧',
+      wrong: 'Something went wrong. Try again.',
+      setup: "Setup isn't finished yet — this request could not be saved.",
+      chooseAmt: 'Choose a tip amount, or send without a tip.',
+      minTip: 'Minimum tip is €10.',
+      processing: 'Processing…', paidSent: 'Tip received — request sent 🎉',
+      paidSaveFail: 'Payment went through, but saving the request failed. Show this screen to the DJ.',
+      payFail: 'Payment failed. Try again or send without a tip.',
+      payCancel: 'Payment cancelled.',
+      canSendNow: 'You can send a new request now 🎧'
+    },
+    tr: {
+      sub: 'Şarkını söyle, senin için çalayım.',
+      note: 'Bu geceki istekler AIDA HEUTE konseptine uymalı — konsept dışı şarkılar çalınmaz.',
+      songLabel: 'Sanatçı & Şarkı', songPh: 'örn. Fred again.. – Marea',
+      hint: '30 dakikada bir ücretsiz istek. Bahşişle şarkın hemen geçer.',
+      tipLabel: 'Bahşiş ekle (isteğe bağlı)', custom: 'Özel tutar', customPh: '€ tutar — min €10',
+      selectedTip: 'Seçilen bahşiş',
+      cooldownText: 'Bu telefondan zaten ücretsiz istek gönderildi. Süre bitince yenisini gönderebilirsin — ya da bahşişle (min €10) hemen gönder.',
+      sendFree: 'İstek gönder', sendFreeAlt: 'Ya da bahşişsiz gönder',
+      errSong: 'Önce sanatçı ve şarkı adını yaz.',
+      dupSong: 'Bu şarkı zaten bu gecenin listesinde. Başka bir tane seç.',
+      cooldownMsg: 'Bu telefondan zaten ücretsiz istek gönderildi — {left} kaldı, ya da bahşişle (min €10) hemen gönder.',
+      checking: 'Kontrol ediliyor…', sending: 'İsteğin gönderiliyor…', sent: 'İstek gönderildi. DJ gördü 🎧',
+      wrong: 'Bir şeyler ters gitti. Tekrar dene.',
+      setup: 'Kurulum henüz bitmedi — istek kaydedilemedi.',
+      chooseAmt: 'Bir bahşiş tutarı seç ya da bahşişsiz gönder.',
+      minTip: 'Minimum bahşiş €10.',
+      processing: 'İşleniyor…', paidSent: 'Bahşiş alındı — istek gönderildi 🎉',
+      paidSaveFail: 'Ödeme geçti ama istek kaydedilemedi. Bu ekranı DJ\'e göster.',
+      payFail: 'Ödeme başarısız. Tekrar dene ya da bahşişsiz gönder.',
+      payCancel: 'Ödeme iptal edildi.',
+      canSendNow: 'Şimdi yeni bir istek gönderebilirsin 🎧'
+    },
+    ru: {
+      sub: 'Загадай свой трек — я поставлю его для тебя.',
+      note: 'Сегодня заявки должны подходить под концепцию AIDA HEUTE — песни вне темы не прозвучат.',
+      songLabel: 'Исполнитель и трек', songPh: 'напр. Fred again.. – Marea',
+      hint: 'Одна бесплатная заявка каждые 30 минут. С чаевыми трек проходит сразу.',
+      tipLabel: 'Добавить чаевые (по желанию)', custom: 'Другая сумма', customPh: '€ сумма — мин. €10',
+      selectedTip: 'Выбранные чаевые',
+      cooldownText: 'С этого телефона уже отправлена бесплатная заявка. Когда таймер закончится, можно отправить новую — или отправь сразу с чаевыми (мин. €10).',
+      sendFree: 'Отправить заявку', sendFreeAlt: 'Или отправить без чаевых',
+      errSong: 'Сначала укажи исполнителя и название трека.',
+      dupSong: 'Этот трек уже в списке на сегодня. Выбери другой.',
+      cooldownMsg: 'С этого телефона уже была бесплатная заявка — осталось {left}, или отправь сразу с чаевыми (мин. €10).',
+      checking: 'Проверка…', sending: 'Отправляем заявку…', sent: 'Заявка отправлена. Диджей её видит 🎧',
+      wrong: 'Что-то пошло не так. Попробуй ещё раз.',
+      setup: 'Настройка ещё не завершена — заявка не сохранена.',
+      chooseAmt: 'Выбери сумму чаевых или отправь без них.',
+      minTip: 'Минимальные чаевые — €10.',
+      processing: 'Обработка…', paidSent: 'Чаевые получены — заявка отправлена 🎉',
+      paidSaveFail: 'Оплата прошла, но заявка не сохранилась. Покажи этот экран диджею.',
+      payFail: 'Оплата не прошла. Попробуй ещё раз или отправь без чаевых.',
+      payCancel: 'Оплата отменена.',
+      canSendNow: 'Можно отправить новую заявку 🎧'
+    }
+  };
+  let LANG = 'de';
+  try{ LANG = localStorage.getItem('djozmen.lang') || 'de'; }catch(e){}
+  if (!I18N[LANG]) LANG = 'de';
+  function T(){ return I18N[LANG]; }
+
+  function applyLang(l){
+    if (!I18N[l]) l = 'de';
+    LANG = l;
+    try{ localStorage.setItem('djozmen.lang', l); }catch(e){}
+    document.documentElement.lang = l;
+    const t = I18N[l];
+    document.getElementById('subLine').textContent = t.sub;
+    document.getElementById('noteLine').textContent = t.note;
+    document.getElementById('songLabel').textContent = t.songLabel;
+    songInput.placeholder = t.songPh;
+    document.getElementById('hintLine').textContent = t.hint;
+    document.getElementById('tipLabel').textContent = t.tipLabel;
+    document.getElementById('customToggle').textContent = t.custom;
+    customAmt.placeholder = t.customPh;
+    document.getElementById('stampLabel').textContent = t.selectedTip;
+    document.getElementById('cooldownText').textContent = t.cooldownText;
+    document.querySelectorAll('.lang').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+    updatePaypalVisibility();
+  }
+  // =====================================================
 
   // ===================== ANTI-SPAM SETTINGS =====================
   // One free request per cabin per COOLDOWN_MS. Paid requests are never
@@ -425,7 +552,6 @@
   const MIN_TIP = 10;
   // The same song can't be requested twice within this window (one night).
   const DUP_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
-  const LS_ROOMS = 'djozmen.rooms';
   const LS_SONGS = 'djozmen.songs';
   const LS_DEVICE = 'djozmen.device';
   // ==============================================================
@@ -433,12 +559,6 @@
   // Firebase keys may not contain . # $ [ ] / — both helpers strip
   // everything that isn't a letter or a digit, so "8214 B" and "8214b"
   // count as the same cabin.
-  function roomKey(v){
-    return String(v || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .slice(0, 12);
-  }
   function songKey(v){
     return String(v || '')
       .toLowerCase()
@@ -446,8 +566,6 @@
       .replace(/[^a-z0-9]/g, '')
       .slice(0, 60);
   }
-
-  function currentRoom(){ return roomInput.value.trim(); }
 
   // A stable id for THIS phone/browser. The anonymous Firebase user id is
   // used when available (it survives page reloads), with a random local id
@@ -496,21 +614,18 @@
       return undefined;
     }
   }
-  async function guardWrite(room, song, ts){
-    const rk = roomKey(room), sk = songKey(song);
-    // Free requests (room given) also stamp the device itself, so switching
-    // to a made-up cabin number does not restart the clock. Paid requests
-    // pass null as room and never stamp the device or the cabin.
-    const dk = room ? deviceKey() : '';
-    const rooms = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4);
+  async function guardWrite(isFree, song, ts){
+    const sk = songKey(song);
+    // Free requests stamp this phone so the 30-minute clock sticks to the
+    // device. Paid requests only stamp the song index — a tip never starts
+    // a cooldown.
+    const dk = isFree ? deviceKey() : '';
     const songs = lsPrune(lsGet(LS_SONGS), DUP_WINDOW_MS);
-    if (rk) { rooms[rk] = ts; lsSet(LS_ROOMS, rooms); }
     if (sk) { songs[sk] = ts; lsSet(LS_SONGS, songs); }
     if (dk) { lsSet(LS_DEVICE, { ts: ts }); }
     if (!firebaseReady || !db) return;
     try{
       const updates = {};
-      if (rk) updates['guardrail/rooms/' + rk] = ts;
       if (sk) updates['guardrail/songs/' + sk] = ts;
       if (dk) updates['guardrail/devices/' + dk] = ts;
       await db.ref().update(updates);
@@ -534,7 +649,7 @@
         clearInterval(cooldownTimer);
         cooldownBox.classList.remove('show');
         sendFreeBtn.disabled = false;
-        setStatus('You can send a new request now 🎧', 'success');
+        setStatus(T().canSendNow, 'success');
         return;
       }
       cooldownClock.textContent = fmtLeft(left);
@@ -550,15 +665,6 @@
     sendFreeBtn.disabled = false;
   }
 
-  // Returns the timestamp of this cabin's last request, preferring the
-  // shared database value and falling back to this device's memory.
-  async function lastRequestAt(room){
-    const rk = roomKey(room);
-    if (!rk) return 0;
-    const remote = await guardRead('guardrail/rooms/' + rk);
-    const local = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4)[rk] || 0;
-    return Math.max(Number(remote) || 0, local);
-  }
   // When did THIS phone last send a free request, regardless of which
   // cabin number was typed in.
   async function lastDeviceAt(){
@@ -580,11 +686,11 @@
   // The single gate every send path goes through. `isPaid` requests skip
   // the cooldown but still can't duplicate a song that's already queued.
   async function passesGuardrail(isPaid){
-    const song = currentSong(), room = currentRoom();
+    const song = currentSong();
 
     const songTs = await lastSongAt(song);
     if (songTs && Date.now() - songTs < DUP_WINDOW_MS){
-      setStatus('That song is already in tonight’s queue. Pick another one. (Dieser Song steht schon in der Liste.)', 'error');
+      setStatus(T().dupSong, 'error');
       songInput.focus();
       songInput.select();
       return false;
@@ -592,15 +698,12 @@
 
     if (isPaid) return true;
 
-    // The clock counts for the cabin number AND for this phone — whichever
-    // was used more recently wins, so changing the cabin number is useless.
-    const roomTs = await lastRequestAt(room);
-    const devTs  = await lastDeviceAt();
-    const baseTs = Math.max(roomTs, devTs);
-    const left = baseTs + COOLDOWN_MS - Date.now();
-    if (baseTs && left > 0){
-      showCooldown(baseTs + COOLDOWN_MS);
-      setStatus('This phone or cabin already sent a free request — ' + fmtLeft(left) + ' left, or add a tip (min €' + MIN_TIP + ') to send now.', 'error');
+    // The 30-minute clock sticks to this phone. A tip always goes through.
+    const devTs = await lastDeviceAt();
+    const left = devTs + COOLDOWN_MS - Date.now();
+    if (devTs && left > 0){
+      showCooldown(devTs + COOLDOWN_MS);
+      setStatus(T().cooldownMsg.replace('{left}', fmtLeft(left)), 'error');
       return false;
     }
     clearCooldownUi();
@@ -627,9 +730,7 @@
   function updatePaypalVisibility(){
     // The payment button only appears for a valid tip (€10 or more).
     paypalContainer.style.display = selectedAmount >= MIN_TIP ? 'block' : 'none';
-    sendFreeBtn.textContent = selectedAmount > 0
-      ? 'Or send without paying the tip (Oder ohne Trinkgeld senden)'
-      : 'Send request (Anfrage senden)';
+    sendFreeBtn.textContent = selectedAmount >= MIN_TIP ? T().sendFreeAlt : T().sendFree;
   }
 
   function setAmount(amt){
@@ -661,13 +762,8 @@
 
   function validateSong(){
     if (!currentSong()){
-      setStatus('Add the artist and song name first.', 'error');
+      setStatus(T().errSong, 'error');
       songInput.focus();
-      return false;
-    }
-    if (!roomKey(currentRoom())){
-      setStatus('Add your cabin number so the DJ knows who asked. (Bitte Kabinennummer angeben.)', 'error');
-      roomInput.focus();
       return false;
     }
     return true;
@@ -689,7 +785,6 @@
     }
     const record = {
       song: currentSong(),
-      room: currentRoom().toUpperCase().slice(0, 8),
       amount: amount || 0,
       tipStatus,            // 'paid' | 'none'
       createdAt: Date.now(),
@@ -720,27 +815,27 @@
 
   sendFreeBtn.addEventListener('click', async () => {
     if (!validateSong()) return;
-    const song = currentSong(), room = currentRoom();
+    const song = currentSong();
     sendFreeBtn.disabled = true;
-    setStatus('Checking…');
+    setStatus(T().checking);
     if (!(await passesGuardrail(false))){
       // passesGuardrail already explained why and, for a cooldown,
       // left the button disabled with a live countdown.
       if (!cooldownBox.classList.contains('show')) sendFreeBtn.disabled = false;
       return;
     }
-    setStatus('Sending your request…');
+    setStatus(T().sending);
     const ok = await saveRequest('none', 0, null);
     sendFreeBtn.disabled = false;
     if (ok){
       const now = Date.now();
-      await guardWrite(room, song, now);
-      setStatus('Request sent. The DJ has it now 🎧', 'success');
+      await guardWrite(true, song, now);
+      setStatus(T().sent, 'success');
       dropNeedle();
       resetForm();
       showCooldown(now + COOLDOWN_MS);
     } else {
-      setStatus(firebaseReady ? 'Something went wrong. Try again.' : 'Setup isn\'t finished yet — this request could not be saved.', 'error');
+      setStatus(firebaseReady ? T().wrong : T().setup, 'error');
     }
   });
 
@@ -751,11 +846,11 @@
       createOrder: async function(data, actions){
         if (!validateSong()) { throw new Error('missing-song'); }
         if (!selectedAmount || selectedAmount <= 0){
-          setStatus('Choose a tip amount, or send without a tip.', 'error');
+          setStatus(T().chooseAmt, 'error');
           throw new Error('missing-amount');
         }
         if (selectedAmount < MIN_TIP){
-          setStatus('Minimum tip is €' + MIN_TIP + '. (Mindest-Trinkgeld €' + MIN_TIP + '.)', 'error');
+          setStatus(T().minTip, 'error');
           throw new Error('below-min-tip');
         }
         // A tip skips the 30-minute cooldown, but nobody pays for a song
@@ -771,26 +866,26 @@
       onApprove: function(data, actions){
         const song = currentSong();
         return actions.order.capture().then(async function(){
-          setStatus('Processing…');
+          setStatus(T().processing);
           const ok = await saveRequest('paid', selectedAmount, data.orderID);
           if (ok){
             // Only the song index is stamped — a paid request must never
             // start a cooldown on the guest's own cabin.
-            await guardWrite(null, song, Date.now());
-            setStatus('Tip received — request sent 🎉', 'success');
+            await guardWrite(false, song, Date.now());
+            setStatus(T().paidSent, 'success');
             dropNeedle();
             resetForm();
           } else {
-            setStatus('Payment went through, but saving the request failed. Show this screen to the DJ.', 'error');
+            setStatus(T().paidSaveFail, 'error');
           }
         });
       },
       onError: function(err){
         console.error('PayPal error:', err);
-        setStatus('Payment failed. Try again or send without a tip.', 'error');
+        setStatus(T().payFail, 'error');
       },
       onCancel: function(){
-        setStatus('Payment cancelled.', '');
+        setStatus(T().payCancel, '');
       }
     }).render('#paypal-button-container').catch(err => console.error('PayPal render error:', err));
   }
@@ -806,32 +901,22 @@
       '<p style="color:#9C8FBF;font-size:12px;text-align:center;">PayPal isn\'t configured yet — set your client ID in the code.</p>';
   }
 
-  // Remember the cabin on this device and re-check the cooldown whenever it
-  // changes, so a blocked guest sees the countdown before typing anything.
-  const savedRoom = (function(){ try{ return localStorage.getItem('djozmen.room') || ''; }catch(e){ return ''; } })();
-  if (savedRoom) roomInput.value = savedRoom;
-
-  let roomCheckToken = 0;
-  async function refreshCooldownFor(room){
-    const token = ++roomCheckToken;
-    if (!roomKey(room)){ clearCooldownUi(); return; }
-    try{ localStorage.setItem('djozmen.room', room); }catch(e){}
-    const roomTs = await lastRequestAt(room);
-    const devTs = await lastDeviceAt();
-    const ts = Math.max(roomTs, devTs);
-    if (token !== roomCheckToken) return;   // a newer check already ran
+  // On load: if this phone is still inside the 30-minute window, show the
+  // countdown right away instead of letting the guest type first.
+  (async function(){
+    const ts = await lastDeviceAt();
     const until = ts + COOLDOWN_MS;
     if (ts && until > Date.now()){
       showCooldown(until);
-      setStatus('');   // the countdown box already explains the wait
-    } else {
-      clearCooldownUi();
+      setStatus('');
     }
-  }
-  roomInput.addEventListener('change', () => refreshCooldownFor(currentRoom()));
-  roomInput.addEventListener('blur', () => refreshCooldownFor(currentRoom()));
-  if (savedRoom) refreshCooldownFor(savedRoom);
+  })();
 
+  // Language switcher
+  document.querySelectorAll('.lang').forEach(btn => {
+    btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+  });
+  applyLang(LANG);
   setAmount(0);
 })();
 </script>
