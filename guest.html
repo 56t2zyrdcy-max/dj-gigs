@@ -150,7 +150,7 @@
   .perforation::before{left:-11px;}
   .perforation::after{right:-11px;}
 
-  .tip-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .tip-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
   .tip-btn{
     font-family:'JetBrains Mono', monospace; font-weight:700; font-size:14px; padding:12px 4px;
     border-radius:10px; border:1px solid rgba(245,240,255,0.18); background:transparent;
@@ -246,6 +246,7 @@
     <div class="ticket-bottom">
       <label>Add a tip (optional)</label>
       <div class="tip-grid" role="group" aria-label="Tip amount">
+        <button type="button" class="tip-btn" data-amt="0">€0</button>
         <button type="button" class="tip-btn" data-amt="10">€10</button>
         <button type="button" class="tip-btn" data-amt="20">€20</button>
         <button type="button" class="tip-btn" id="customToggle" data-amt="custom">Custom</button>
