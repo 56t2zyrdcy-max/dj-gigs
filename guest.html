@@ -240,8 +240,9 @@
   <div class="langbar" role="group" aria-label="Sprache / Language / Dil / Язык">
     <button type="button" class="lang" data-lang="de" aria-label="Deutsch"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#000"/><rect y="13.3" width="60" height="26.7" fill="#DD0000"/><rect y="26.6" width="60" height="13.4" fill="#FFCE00"/></svg></button>
     <button type="button" class="lang" data-lang="en" aria-label="English"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#012169"/><path d="M0,0 60,40 M60,0 0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 60,40 M60,0 0,40" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="12"/><path d="M30,0 V40 M0,20 H60" stroke="#C8102E" stroke-width="7"/></svg></button>
+    <button type="button" class="lang" data-lang="es" aria-label="Español"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#AA151B"/><rect y="10" width="60" height="20" fill="#F1BF00"/></svg></button>
+    <button type="button" class="lang" data-lang="nl" aria-label="Nederlands"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#AE1C28"/><rect y="13.3" width="60" height="13.4" fill="#fff"/><rect y="26.6" width="60" height="13.4" fill="#21468B"/></svg></button>
     <button type="button" class="lang" data-lang="tr" aria-label="Türkçe"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#E30A17"/><circle cx="24" cy="20" r="10" fill="#fff"/><circle cx="26.5" cy="20" r="8" fill="#E30A17"/><polygon points="38,16 39,18.6 41.8,18.8 39.6,20.6 40.4,23.2 38,21.7 35.6,23.2 36.4,20.6 34.2,18.8 37,18.6" fill="#fff"/></svg></button>
-    <button type="button" class="lang" data-lang="ru" aria-label="Русский"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#fff"/><rect y="13.3" width="60" height="26.7" fill="#0039A6"/><rect y="26.6" width="60" height="13.4" fill="#D52B1E"/></svg></button>
   </div>
   <div class="deck">
     <div class="turntable" aria-hidden="true">
@@ -493,28 +494,51 @@
       payCancel: 'Ödeme iptal edildi.',
       canSendNow: 'Şimdi yeni bir istek gönderebilirsin 🎧'
     },
-    ru: {
-      sub: 'Загадай свой трек — я поставлю его для тебя.',
-      note: 'Сегодня заявки должны подходить под концепцию AIDA HEUTE — песни вне темы не прозвучат.',
-      songLabel: 'Исполнитель и трек', songPh: 'напр. Fred again.. – Marea',
-      hint: 'Одна бесплатная заявка каждые 30 минут. С чаевыми трек проходит сразу.',
-      tipLabel: 'Добавить чаевые (по желанию)', custom: 'Другая сумма', customPh: '€ сумма — мин. €10',
-      selectedTip: 'Выбранные чаевые',
-      cooldownText: 'С этого телефона уже отправлена бесплатная заявка. Когда таймер закончится, можно отправить новую — или отправь сразу с чаевыми (мин. €10).',
-      sendFree: 'Отправить заявку', sendFreeAlt: 'Или отправить без чаевых',
-      errSong: 'Сначала укажи исполнителя и название трека.',
-      dupSong: 'Этот трек уже в списке на сегодня. Выбери другой.',
-      cooldownMsg: 'С этого телефона уже была бесплатная заявка — осталось {left}, или отправь сразу с чаевыми (мин. €10).',
-      checking: 'Проверка…', sending: 'Отправляем заявку…', sent: 'Заявка отправлена. Диджей её видит 🎧',
-      wrong: 'Что-то пошло не так. Попробуй ещё раз.',
-      setup: 'Настройка ещё не завершена — заявка не сохранена.',
-      chooseAmt: 'Выбери сумму чаевых или отправь без них.',
-      minTip: 'Минимальные чаевые — €10.',
-      processing: 'Обработка…', paidSent: 'Чаевые получены — заявка отправлена 🎉',
-      paidSaveFail: 'Оплата прошла, но заявка не сохранилась. Покажи этот экран диджею.',
-      payFail: 'Оплата не прошла. Попробуй ещё раз или отправь без чаевых.',
-      payCancel: 'Оплата отменена.',
-      canSendNow: 'Можно отправить новую заявку 🎧'
+    es: {
+      sub: 'Pide tu canción — la pincho para ti.',
+      note: 'Las peticiones de esta noche deben encajar con el concepto AIDA HEUTE — las canciones fuera del tema no sonarán.',
+      songLabel: 'Artista y canción', songPh: 'p. ej. Fred again.. – Marea',
+      hint: 'Una petición gratis cada 30 minutos. Con propina tu canción pasa al momento.',
+      tipLabel: 'Añadir propina (opcional)', custom: 'Otra cantidad', customPh: '€ importe — mín. €10',
+      selectedTip: 'Propina elegida',
+      cooldownText: 'Este teléfono ya envió una petición gratis. Cuando el reloj termine podrás enviar otra — o envía ya con propina (mín. €10).',
+      sendFree: 'Enviar petición', sendFreeAlt: 'O enviar sin propina',
+      errSong: 'Escribe primero el artista y el título.',
+      dupSong: 'Esa canción ya está en la lista de esta noche. Elige otra.',
+      cooldownMsg: 'Este teléfono ya envió una petición gratis — quedan {left}, o envía ya con propina (mín. €10).',
+      checking: 'Comprobando…', sending: 'Enviando tu petición…', sent: 'Petición enviada. El DJ ya la tiene 🎧',
+      wrong: 'Algo salió mal. Inténtalo de nuevo.',
+      setup: 'La configuración aún no está lista — la petición no se guardó.',
+      chooseAmt: 'Elige una cantidad de propina o envía sin propina.',
+      minTip: 'La propina mínima es €10.',
+      processing: 'Procesando…', paidSent: 'Propina recibida — petición enviada 🎉',
+      paidSaveFail: 'El pago se realizó, pero la petición no se guardó. Muestra esta pantalla al DJ.',
+      payFail: 'El pago falló. Inténtalo de nuevo o envía sin propina.',
+      payCancel: 'Pago cancelado.',
+      canSendNow: 'Ya puedes enviar una nueva petición 🎧'
+    },
+    nl: {
+      sub: 'Wens je nummer — ik draai het voor je.',
+      note: 'De verzoekjes van vanavond moeten passen bij het AIDA HEUTE concept — nummers buiten dat thema worden niet gedraaid.',
+      songLabel: 'Artiest & nummer', songPh: 'bijv. Fred again.. – Marea',
+      hint: 'Elke 30 minuten één gratis verzoekje. Met fooi gaat je nummer meteen door.',
+      tipLabel: 'Fooi toevoegen (optioneel)', custom: 'Ander bedrag', customPh: '€ bedrag — min. €10',
+      selectedTip: 'Gekozen fooi',
+      cooldownText: 'Deze telefoon heeft al een gratis verzoekje gestuurd. Als de klok afloopt kan het volgende — of stuur meteen met fooi (min. €10).',
+      sendFree: 'Verzoekje sturen', sendFreeAlt: 'Of sturen zonder fooi',
+      errSong: 'Vul eerst de artiest en de titel in.',
+      dupSong: 'Dat nummer staat al in de lijst van vanavond. Kies een ander.',
+      cooldownMsg: 'Deze telefoon stuurde al een gratis verzoekje — nog {left}, of stuur meteen met fooi (min. €10).',
+      checking: 'Controleren…', sending: 'Je verzoekje wordt verstuurd…', sent: 'Verzoekje verstuurd. De DJ heeft het 🎧',
+      wrong: 'Er ging iets mis. Probeer het opnieuw.',
+      setup: 'De installatie is nog niet klaar — het verzoekje is niet opgeslagen.',
+      chooseAmt: 'Kies een fooibedrag of stuur zonder fooi.',
+      minTip: 'De minimale fooi is €10.',
+      processing: 'Verwerken…', paidSent: 'Fooi ontvangen — verzoekje verstuurd 🎉',
+      paidSaveFail: 'De betaling is gelukt, maar het verzoekje is niet opgeslagen. Laat dit scherm aan de DJ zien.',
+      payFail: 'Betaling mislukt. Probeer opnieuw of stuur zonder fooi.',
+      payCancel: 'Betaling geannuleerd.',
+      canSendNow: 'Je kunt nu een nieuw verzoekje sturen 🎧'
     }
   };
   let LANG = 'de';
