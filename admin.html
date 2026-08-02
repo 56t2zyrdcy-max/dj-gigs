@@ -40,6 +40,8 @@
     display:inline-block; width:6px;height:6px; border-radius:50%;
     background:var(--coral); margin-right:6px; animation:pulse 1.6s ease-in-out infinite;
   }
+  .eyebrow.offline{ color:#FF7A7A; }
+  .eyebrow.offline .dot{ background:#FF7A7A; animation:none; }
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
   h1{
     font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:34px;
@@ -181,7 +183,7 @@
 <div class="wrap">
   <header>
     <div>
-      <p class="eyebrow"><span class="dot"></span>Booth view</p>
+      <p class="eyebrow"><span class="dot" id="liveDot"></span><span id="liveText">Booth view</span></p>
       <h1>Live Queue</h1>
     </div>
     <div class="stats">
@@ -238,13 +240,25 @@
   let db = null;
   let auth = null;
   let firebaseReady = false;
+
+  // Google sign-in and reCAPTCHA both need a real http(s) origin. Opened
+  // straight from disk (file://) the browser reports the origin as "null",
+  // Firebase rejects it, and the booth can never unlock. Detected here so
+  // the page can explain itself instead of failing silently.
+  const NEEDS_SERVER = location.protocol !== 'http:' && location.protocol !== 'https:';
+
   const isPlaceholder = Object.values(firebaseConfig).some(v => typeof v === 'string' && v.includes('YOUR_'));
-  if (!isPlaceholder){
+  const sdkLoaded = (typeof firebase !== 'undefined');
+  window.__boothFailure = isPlaceholder ? 'config' : (sdkLoaded ? '' : 'offline');
+
+  if (!isPlaceholder && sdkLoaded){
     try{
       firebase.initializeApp(firebaseConfig);
 
       // App Check must be activated before any other Firebase call.
-      if (firebase.appCheck && RECAPTCHA_SITE_KEY){
+      // Skipped on file:// — reCAPTCHA cannot run there and throws on
+      // every token refresh, which drowns the real error in the console.
+      if (firebase.appCheck && RECAPTCHA_SITE_KEY && !NEEDS_SERVER){
         try{ firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true); }
         catch(e){ console.warn('App Check not active:', e && e.message); }
       }
@@ -256,6 +270,8 @@
     }catch(e){
       console.error('Firebase init failed:', e);
     }
+  } else if (!sdkLoaded){
+    console.error('Firebase SDK did not load — no internet, or the scripts are blocked.');
   } else {
     console.warn('Firebase config still has placeholder values — the queue will stay empty.');
   }
@@ -276,10 +292,18 @@
   let loadedInitial = false;
 
   // Simple beep using Web Audio API — no external sound file needed.
+  // One shared AudioContext instead of one per beep. Each context holds an
+  // audio thread that is never released, and Safari/iOS refuses new ones
+  // after a handful — so a long night would end with a silent booth.
+  let audioCtx = null;
   function playBeep(){
     if (!soundOn) return;
     try{
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const ctx = audioCtx;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -382,14 +406,55 @@
       const current = requests[id];
       db.ref('requests/' + id + '/played').set(!current.played);
     } else if (btn.dataset.action === 'delete'){
-      db.ref('requests/' + id).remove();
+      // Two-tap delete. A single stray tap in a dark booth would otherwise
+      // wipe a request with no undo, since it is gone from the database.
+      if (btn.dataset.armed === '1'){
+        db.ref('requests/' + id).remove();
+        return;
+      }
+      btn.dataset.armed = '1';
+      btn.textContent = '?';
+      btn.style.borderColor = '#FF7A7A';
+      btn.style.color = '#FF7A7A';
+      btn.title = 'Tap again to remove';
+      setTimeout(() => {
+        if (!btn.isConnected) return;
+        btn.dataset.armed = '';
+        btn.textContent = '\u2715';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.title = 'Remove';
+      }, 3000);
     }
   });
 
   if (!firebaseReady || !db){
-    document.getElementById('configWarning').hidden = false;
+    const warn = document.getElementById('configWarning');
+    if (window.__boothFailure === 'offline'){
+      warn.innerHTML = '\u26a0\ufe0f <b>No connection:</b> the Firebase scripts could not be ' +
+        'downloaded, so the queue cannot load. Your setup is fine \u2014 this is the ' +
+        'internet. Reconnect and reload the page.';
+    }
+    warn.hidden = false;
     document.getElementById('authGate').hidden = true;
     render();
+    return;
+  }
+
+  // Opened as a local file: Google sign-in cannot work, so say so plainly
+  // rather than leaving the DJ clicking a button that will never succeed.
+  if (NEEDS_SERVER){
+    const gate = document.getElementById('authGate');
+    const btn  = document.getElementById('googleBtn');
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    gate.querySelector('.gate-card p').innerHTML =
+      'This page is open as a local file, so Google refuses to sign you in ' +
+      '(the browser reports no web address). Put <b>admin.html</b> on a web ' +
+      'address &mdash; Firebase Hosting gives you one free &mdash; and open it ' +
+      'from there. Everything else in this file is already correct.';
+    document.getElementById('gateMsg').textContent =
+      location.protocol + '// is not a supported origin.';
     return;
   }
 
@@ -407,6 +472,11 @@
 
   function stopQueue(){
     if (queueRef){ queueRef.off(); queueRef = null; }
+    if (connRef){ connRef.off(); connRef = null; }
+    const liveText = document.getElementById('liveText');
+    const liveDot = document.getElementById('liveDot');
+    if (liveText) liveText.textContent = 'Booth view';
+    if (liveDot && liveDot.parentElement) liveDot.parentElement.classList.remove('offline');
   }
 
   // Housekeeping: drop requests older than 48 hours whenever the DJ opens
@@ -448,8 +518,25 @@
       .catch((e) => console.warn('Guardrail cleanup skipped:', e && (e.code || e.message)));
   }
 
+  // Live/offline badge in the header.
+  let connRef = null;
+  function watchConnection(){
+    if (connRef) return;
+    const liveDot = document.getElementById('liveDot');
+    const liveText = document.getElementById('liveText');
+    const eyebrow = liveDot && liveDot.parentElement;
+    if (!eyebrow) return;
+    connRef = db.ref('.info/connected');
+    connRef.on('value', (snap) => {
+      const online = snap.val() === true;
+      eyebrow.classList.toggle('offline', !online);
+      liveText.textContent = online ? 'Booth view · live' : 'Offline — queue may be stale';
+    });
+  }
+
   function startQueue(){
     if (queueRef) return;
+    watchConnection();
     cleanupOld();
     cleanupGuardrail();
     const ref = db.ref('requests');
