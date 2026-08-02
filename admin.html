@@ -393,8 +393,8 @@
       .sort((a,b) => b[1].createdAt - a[1].createdAt);
     // The live queue shows the last 24 hours; everything older lives in
     // the collapsible history below.
-    const list = all.filter(([, r]) => nowTs - r.createdAt < DAY_MS);
-    const history = all.filter(([, r]) => nowTs - r.createdAt >= DAY_MS);
+    const list = all.filter(([, r]) => !r.removed && nowTs - r.createdAt < DAY_MS);
+    const history = all.filter(([, r]) => r.removed || nowTs - r.createdAt >= DAY_MS);
 
     const filtered = list.filter(([id, r]) => {
       if (filter === 'unplayed') return !r.played && !r.rejected;
@@ -471,7 +471,7 @@
       const cabin = r.room ? ' <span style="color:var(--slate)">· ' + escapeHtml(String(r.room)) + '</span>' : '';
       html += '<div class="hist-row">'
         + '<span class="hist-time">' + time + '</span>'
-        + '<span class="hist-song">' + (r.rejected ? '🚫 ' : '') + escapeHtml(r.song || '') + cabin + '</span>'
+        + '<span class="hist-song">' + (r.removed ? '✕ ' : '') + (r.rejected ? '🚫 ' : '') + escapeHtml(r.song || '') + cabin + '</span>'
         + '<span class="hist-tip ' + (r.tipStatus === 'paid' ? 'paid' : 'none') + '">'
         + (r.tipStatus === 'paid' ? '€' + Number(r.amount) : '—') + '</span>'
         + '</div>';
@@ -498,10 +498,10 @@
       const current = requests[id];
       db.ref('requests/' + id + '/rejected').set(current.rejected ? null : true);
     } else if (btn.dataset.action === 'delete'){
-      // Two-tap delete. A single stray tap in a dark booth would otherwise
-      // wipe a request with no undo, since it is gone from the database.
+      // Two-tap remove. The record is not deleted — it is flagged and moves
+      // to the 30-day history below; the 30-day cleanup wipes it for real.
       if (btn.dataset.armed === '1'){
-        db.ref('requests/' + id).remove();
+        db.ref('requests/' + id + '/removed').set(true);
         return;
       }
       btn.dataset.armed = '1';
