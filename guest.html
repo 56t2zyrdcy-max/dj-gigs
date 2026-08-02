@@ -150,7 +150,7 @@
   .perforation::before{left:-11px;}
   .perforation::after{right:-11px;}
 
-  .tip-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
+  .tip-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
   .tip-btn{
     font-family:'JetBrains Mono', monospace; font-weight:700; font-size:14px; padding:12px 4px;
     border-radius:10px; border:1px solid rgba(245,240,255,0.18); background:transparent;
@@ -237,7 +237,7 @@
       <div class="field">
         <label for="roomInput">Cabin no · Kabinennummer</label>
         <input id="roomInput" name="roomInput" placeholder="8214" autocomplete="off" maxlength="8" inputmode="text" required>
-        <p class="hint">One free request per cabin every 30 minutes. Tipped requests always go through.<br>Pro Kabine eine kostenlose Anfrage alle 30 Minuten. Anfragen mit Trinkgeld gehen immer durch.</p>
+        <p class="hint">One free request per cabin &amp; phone every 30 minutes. Tipped requests (min €10) always go through.<br>Pro Kabine &amp; Handy eine kostenlose Anfrage alle 30 Minuten. Anfragen mit Trinkgeld (min. €10) gehen immer durch.</p>
       </div>
     </div>
 
@@ -246,12 +246,11 @@
     <div class="ticket-bottom">
       <label>Add a tip (optional)</label>
       <div class="tip-grid" role="group" aria-label="Tip amount">
-        <button type="button" class="tip-btn" data-amt="0">€0</button>
-        <button type="button" class="tip-btn" data-amt="5">€5</button>
         <button type="button" class="tip-btn" data-amt="10">€10</button>
+        <button type="button" class="tip-btn" data-amt="20">€20</button>
         <button type="button" class="tip-btn" id="customToggle" data-amt="custom">Custom</button>
       </div>
-      <input type="number" id="customAmt" min="1" step="1" placeholder="€ amount" hidden>
+      <input type="number" id="customAmt" min="10" step="1" placeholder="€ amount — min €10" hidden>
 
       <div class="stamp-row">
         <span class="stamp-label">Selected tip</span>
@@ -263,7 +262,7 @@
   <div class="actions">
     <div class="cooldown" id="cooldownBox">
       <span class="clock" id="cooldownClock">30:00</span>
-      <span id="cooldownText">Your cabin already sent a free request. You can send the next one when the clock runs out — or add a tip to send right away.</span>
+      <span id="cooldownText">This phone or cabin already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.</span>
     </div>
     <div id="paypal-button-container"></div>
     <button type="button" class="free-btn" id="sendFreeBtn">Send request without a tip (Ohne Trinkgeld senden)</button>
@@ -382,10 +381,14 @@
   // One free request per cabin per COOLDOWN_MS. Paid requests are never
   // blocked by the cooldown — a tip always jumps the line.
   const COOLDOWN_MS = 30 * 60 * 1000;      // 30 minutes
+  // Tips below this are not accepted — the buttons offer €10/€20 and the
+  // custom field refuses anything smaller.
+  const MIN_TIP = 10;
   // The same song can't be requested twice within this window (one night).
   const DUP_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
   const LS_ROOMS = 'djozmen.rooms';
   const LS_SONGS = 'djozmen.songs';
+  const LS_DEVICE = 'djozmen.device';
   // ==============================================================
 
   // Firebase keys may not contain . # $ [ ] / — both helpers strip
@@ -406,6 +409,25 @@
   }
 
   function currentRoom(){ return roomInput.value.trim(); }
+
+  // A stable id for THIS phone/browser. The anonymous Firebase user id is
+  // used when available (it survives page reloads), with a random local id
+  // as fallback. Typing a different cabin number does not change it — so
+  // the 30-minute limit sticks to the phone as well as the cabin.
+  function deviceKey(){
+    try{
+      const u = firebase.auth().currentUser;
+      if (u && u.uid) return u.uid;
+    }catch(e){}
+    try{
+      let id = localStorage.getItem('djozmen.deviceid');
+      if (!id){
+        id = 'd' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+        localStorage.setItem('djozmen.deviceid', id);
+      }
+      return id;
+    }catch(e){ return ''; }
+  }
 
   // ---- local (per-device) memory, used as a fallback whenever the
   // database can't be reached or refuses the guardrail read ----
@@ -437,15 +459,21 @@
   }
   async function guardWrite(room, song, ts){
     const rk = roomKey(room), sk = songKey(song);
+    // Free requests (room given) also stamp the device itself, so switching
+    // to a made-up cabin number does not restart the clock. Paid requests
+    // pass null as room and never stamp the device or the cabin.
+    const dk = room ? deviceKey() : '';
     const rooms = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4);
     const songs = lsPrune(lsGet(LS_SONGS), DUP_WINDOW_MS);
     if (rk) { rooms[rk] = ts; lsSet(LS_ROOMS, rooms); }
     if (sk) { songs[sk] = ts; lsSet(LS_SONGS, songs); }
+    if (dk) { lsSet(LS_DEVICE, { ts: ts }); }
     if (!firebaseReady || !db) return;
     try{
       const updates = {};
       if (rk) updates['guardrail/rooms/' + rk] = ts;
       if (sk) updates['guardrail/songs/' + sk] = ts;
+      if (dk) updates['guardrail/devices/' + dk] = ts;
       await db.ref().update(updates);
     }catch(e){
       console.warn('Guardrail write unavailable:', e && e.message);
@@ -492,6 +520,16 @@
     const local = lsPrune(lsGet(LS_ROOMS), COOLDOWN_MS * 4)[rk] || 0;
     return Math.max(Number(remote) || 0, local);
   }
+  // When did THIS phone last send a free request, regardless of which
+  // cabin number was typed in.
+  async function lastDeviceAt(){
+    const dk = deviceKey();
+    if (!dk) return 0;
+    const remote = await guardRead('guardrail/devices/' + dk);
+    const local = Number((lsGet(LS_DEVICE) || {}).ts) || 0;
+    return Math.max(Number(remote) || 0, local);
+  }
+
   async function lastSongAt(song){
     const sk = songKey(song);
     if (!sk) return 0;
@@ -515,11 +553,15 @@
 
     if (isPaid) return true;
 
+    // The clock counts for the cabin number AND for this phone — whichever
+    // was used more recently wins, so changing the cabin number is useless.
     const roomTs = await lastRequestAt(room);
-    const left = roomTs + COOLDOWN_MS - Date.now();
-    if (roomTs && left > 0){
-      showCooldown(roomTs + COOLDOWN_MS);
-      setStatus('Cabin ' + room + ' already has a free request in the queue — ' + fmtLeft(left) + ' left, or add a tip to send now.', 'error');
+    const devTs  = await lastDeviceAt();
+    const baseTs = Math.max(roomTs, devTs);
+    const left = baseTs + COOLDOWN_MS - Date.now();
+    if (baseTs && left > 0){
+      showCooldown(baseTs + COOLDOWN_MS);
+      setStatus('This phone or cabin already sent a free request — ' + fmtLeft(left) + ' left, or add a tip (min €' + MIN_TIP + ') to send now.', 'error');
       return false;
     }
     clearCooldownUi();
@@ -544,8 +586,8 @@
   }
 
   function updatePaypalVisibility(){
-    // No point showing a payment button for €0 — that's a free request.
-    paypalContainer.style.display = selectedAmount > 0 ? 'block' : 'none';
+    // The payment button only appears for a valid tip (€10 or more).
+    paypalContainer.style.display = selectedAmount >= MIN_TIP ? 'block' : 'none';
     sendFreeBtn.textContent = selectedAmount > 0
       ? 'Or send without paying the tip (Oder ohne Trinkgeld senden)'
       : 'Send request (Anfrage senden)';
@@ -673,6 +715,10 @@
           setStatus('Choose a tip amount, or send without a tip.', 'error');
           throw new Error('missing-amount');
         }
+        if (selectedAmount < MIN_TIP){
+          setStatus('Minimum tip is €' + MIN_TIP + '. (Mindest-Trinkgeld €' + MIN_TIP + '.)', 'error');
+          throw new Error('below-min-tip');
+        }
         // A tip skips the 30-minute cooldown, but nobody pays for a song
         // that is already in the queue.
         if (!(await passesGuardrail(true))){ throw new Error('duplicate-song'); }
@@ -731,7 +777,9 @@
     const token = ++roomCheckToken;
     if (!roomKey(room)){ clearCooldownUi(); return; }
     try{ localStorage.setItem('djozmen.room', room); }catch(e){}
-    const ts = await lastRequestAt(room);
+    const roomTs = await lastRequestAt(room);
+    const devTs = await lastDeviceAt();
+    const ts = Math.max(roomTs, devTs);
     if (token !== roomCheckToken) return;   // a newer check already ran
     const until = ts + COOLDOWN_MS;
     if (ts && until > Date.now()){

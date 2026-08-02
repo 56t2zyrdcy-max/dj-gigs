@@ -506,7 +506,7 @@
     db.ref('guardrail').once('value')
       .then((snap) => {
         const updates = {};
-        ['rooms', 'songs'].forEach((bucket) => {
+        ['rooms', 'songs', 'devices'].forEach((bucket) => {
           const node = snap.child(bucket);
           node.forEach((child) => {
             if (Number(child.val()) < cutoff) updates['guardrail/' + bucket + '/' + child.key] = null;
