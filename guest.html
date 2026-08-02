@@ -396,15 +396,36 @@
 <script>
   const PAYPAL_CLIENT_ID = "AQhUfrDjJKnp6mtUK7wr3APBmYz9em88pZnhJLirg2SJPYp9st66d6tX6AYcpOZDszeJmu0AeSdFe_Dz";
   window.__paypalReady = false;
-  if (!PAYPAL_CLIENT_ID.includes('YOUR_')){
+  window.__paypalLocale = '';
+  // The PayPal button is rendered by PayPal's own SDK, which guesses the
+  // language from the browser unless told otherwise. We tell it — and when
+  // the guest switches language, the SDK is reloaded in that language.
+  const PAYPAL_LOCALES = { de:'de_DE', en:'en_GB', tr:'tr_TR', es:'es_ES', nl:'nl_NL' };
+  window.__loadPaypalSdk = function(lang){
+    if (PAYPAL_CLIENT_ID.includes('YOUR_')){
+      console.warn('PayPal client ID still has a placeholder value — payments are disabled.');
+      return;
+    }
+    const locale = PAYPAL_LOCALES[lang] || 'de_DE';
+    if (window.__paypalLocale === locale) return;   // already this language
+    window.__paypalLocale = locale;
+    window.__paypalReady = false;
+    const old = document.getElementById('paypal-sdk');
+    if (old) old.remove();
+    try{ delete window.paypal; }catch(e){ window.paypal = undefined; }
     const s = document.createElement('script');
-    s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID) + '&currency=EUR&disable-funding=sepa';
+    s.id = 'paypal-sdk';
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(PAYPAL_CLIENT_ID)
+          + '&currency=EUR&disable-funding=sepa&locale=' + locale;
     s.onload = () => { window.__paypalReady = true; window.dispatchEvent(new Event('paypalsdkready')); };
     s.onerror = () => { console.error('PayPal SDK failed to load.'); };
     document.head.appendChild(s);
-  } else {
-    console.warn('PayPal client ID still has a placeholder value — payments are disabled.');
-  }
+  };
+  (function(){
+    let lang = 'de';
+    try{ lang = localStorage.getItem('djozmen.lang') || 'de'; }catch(e){}
+    window.__loadPaypalSdk(lang);
+  })();
 </script>
 
 <script>
@@ -564,6 +585,7 @@
     document.getElementById('cooldownText').textContent = t.cooldownText;
     document.querySelectorAll('.lang').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
     updatePaypalVisibility();
+    if (window.__loadPaypalSdk) window.__loadPaypalSdk(l);
   }
   // =====================================================
 
@@ -865,6 +887,7 @@
 
   function renderPaypalButtons(){
     if (!window.paypal) return;
+    paypalContainer.innerHTML = '';   // clear before (re)render on language change
     paypal.Buttons({
       style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'pay' },
       createOrder: async function(data, actions){
@@ -914,11 +937,8 @@
     }).render('#paypal-button-container').catch(err => console.error('PayPal render error:', err));
   }
 
-  if (window.__paypalReady) {
-    renderPaypalButtons();
-  } else {
-    window.addEventListener('paypalsdkready', renderPaypalButtons, { once: true });
-  }
+  window.addEventListener('paypalsdkready', renderPaypalButtons);
+  if (window.__paypalReady) renderPaypalButtons();
 
   if (PAYPAL_CLIENT_ID.includes('YOUR_')){
     paypalContainer.innerHTML =
