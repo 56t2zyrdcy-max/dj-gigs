@@ -99,14 +99,23 @@
     display:inline-block; width:6px;height:6px; border-radius:50%;
     background:var(--magenta); margin-right:6px; animation:pulse 1.6s ease-in-out infinite;
   }
+  #langSwitch{
+    position:fixed; top:14px; right:14px; z-index:40;
+    width:46px; height:33px; border-radius:8px; overflow:hidden; padding:0;
+    border:1px solid rgba(245,240,255,0.35); background:rgba(11,0,20,0.55);
+    cursor:pointer; opacity:.85; transition:all .15s ease;
+  }
+  #langSwitch:hover{ opacity:1; border-color:var(--cyan); }
+  #langSwitch svg{ width:100%; height:100%; display:block; }
+
   /* ---- welcome / language gate ---- */
   #welcomeGate{
     position:fixed; inset:0; z-index:60;
     display:flex; align-items:center; justify-content:center; padding:24px;
     background:radial-gradient(ellipse at top, var(--curtain) 0%, var(--void) 72%);
-    transition:opacity .45s ease;
+    transition:opacity .45s ease, visibility .45s ease;
   }
-  #welcomeGate.hide{ opacity:0; pointer-events:none; }
+  #welcomeGate.hide{ opacity:0; pointer-events:none; visibility:hidden; }
   .welcome-card{ text-align:center; max-width:400px; width:100%; }
   .welcome-card .wlogo{
     width:172px; height:172px; margin:0 auto 16px; display:block;
@@ -278,6 +287,8 @@
 
 <div class="stage-lights" aria-hidden="true"><span></span><span></span></div>
 
+<button id="langSwitch" type="button" aria-label="Sprache ändern · Change language"></button>
+
 <div id="welcomeGate">
   <div class="welcome-card">
     <img class="wlogo" id="welcomeLogo" alt="DJ oZMEn">
@@ -295,13 +306,6 @@
 </div>
 
 <div class="app">
-  <div class="langbar" role="group" aria-label="Sprache / Language / Dil / Язык">
-    <button type="button" class="lang" data-lang="de" aria-label="Deutsch"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#000"/><rect y="13.3" width="60" height="26.7" fill="#DD0000"/><rect y="26.6" width="60" height="13.4" fill="#FFCE00"/></svg></button>
-    <button type="button" class="lang" data-lang="en" aria-label="English"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#012169"/><path d="M0,0 60,40 M60,0 0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 60,40 M60,0 0,40" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="12"/><path d="M30,0 V40 M0,20 H60" stroke="#C8102E" stroke-width="7"/></svg></button>
-    <button type="button" class="lang" data-lang="es" aria-label="Español"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#AA151B"/><rect y="10" width="60" height="20" fill="#F1BF00"/></svg></button>
-    <button type="button" class="lang" data-lang="nl" aria-label="Nederlands"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#AE1C28"/><rect y="13.3" width="60" height="13.4" fill="#fff"/><rect y="26.6" width="60" height="13.4" fill="#21468B"/></svg></button>
-    <button type="button" class="lang" data-lang="tr" aria-label="Türkçe"><svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#E30A17"/><circle cx="24" cy="20" r="10" fill="#fff"/><circle cx="26.5" cy="20" r="8" fill="#E30A17"/><polygon points="38,16 39,18.6 41.8,18.8 39.6,20.6 40.4,23.2 38,21.7 35.6,23.2 36.4,20.6 34.2,18.8 37,18.6" fill="#fff"/></svg></button>
-  </div>
   <div class="deck">
     <div class="turntable" aria-hidden="true">
       <div class="vinyl">
@@ -651,6 +655,7 @@
     document.getElementById('stampLabel').textContent = t.selectedTip;
     document.getElementById('cooldownText').textContent = t.cooldownText;
     document.querySelectorAll('.lang').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+    if (window.__syncLangSwitch) window.__syncLangSwitch(l);
     updatePaypalVisibility();
     if (window.__loadPaypalSdk) window.__loadPaypalSdk(l);
   }
@@ -1097,32 +1102,44 @@
   applyLang(LANG);
 
   // ---- welcome screen: first scan shows logo + rotating greeting +
-  // flag picker. Returning guests skip straight to the form. ----
+  // flag picker. Returning guests skip straight to the form; the little
+  // corner flag reopens this screen to change language later. ----
   (function(){
     const gate = document.getElementById('welcomeGate');
+    const sw = document.getElementById('langSwitch');
     if (!gate) return;
     let welcomed = false;
     try{ welcomed = localStorage.getItem('djozmen.welcomed') === '1'; }catch(e){}
-    if (welcomed){ gate.remove(); return; }
     const vin = document.querySelector('.vinyl .label img');
     const wl = document.getElementById('welcomeLogo');
     if (vin && wl) wl.src = vin.src;
     const words = ['Willkommen', 'Welcome', 'Bienvenidos', 'Welkom', 'Hoş geldiniz'];
     const wEl = document.getElementById('welcomeWord');
-    let wi = 0;
-    const spin = setInterval(() => {
-      wEl.style.opacity = 0;
-      setTimeout(() => { wi = (wi + 1) % words.length; wEl.textContent = words[wi]; wEl.style.opacity = 1; }, 300);
-    }, 1700);
+    let wi = 0, spin = null;
+    function startSpin(){
+      stopSpin();
+      spin = setInterval(() => {
+        wEl.style.opacity = 0;
+        setTimeout(() => { wi = (wi + 1) % words.length; wEl.textContent = words[wi]; wEl.style.opacity = 1; }, 300);
+      }, 1700);
+    }
+    function stopSpin(){ if (spin){ clearInterval(spin); spin = null; } }
+    if (welcomed){ gate.classList.add('hide'); } else { startSpin(); }
     gate.querySelectorAll('.wflag').forEach(b => {
       b.addEventListener('click', () => {
-        clearInterval(spin);
         applyLang(b.dataset.lang);
         try{ localStorage.setItem('djozmen.welcomed', '1'); }catch(e){}
         gate.classList.add('hide');
-        setTimeout(() => gate.remove(), 500);
+        stopSpin();
       });
     });
+    if (sw) sw.addEventListener('click', () => { gate.classList.remove('hide'); startSpin(); });
+    window.__syncLangSwitch = function(l){
+      if (!sw) return;
+      const src = gate.querySelector('.wflag[data-lang="' + l + '"] svg');
+      if (src) sw.innerHTML = src.outerHTML;
+    };
+    window.__syncLangSwitch(LANG);
   })();
 
   setAmount(0);
