@@ -823,6 +823,7 @@
       if (reqs[id] && reqs[id].lastReaction === v) return;
       if (reqs[id]){ reqs[id].lastReaction = v; lsSet(LS_MYREQS, reqs); }
       showReaction(v);
+      liftCooldown();
     }, () => {});
   }
 
@@ -837,10 +838,10 @@
     clearTimeout(reactionTimer);
     reactionTimer = setTimeout(() => pop.classList.remove('show'), 5500);
   }
-  async function showRejected(song){
-    document.getElementById('rejectText').textContent = T().rejected.replace('{song}', song);
-    document.getElementById('rejectBox').classList.add('show');
-    // The DJ said no — the guest should not sit out the 30 minutes.
+  // Lifts this phone's 30-minute lock — used when the DJ rejects a song
+  // (fairness) and when the DJ sends a reaction (a little reward: the
+  // guest may wish again right away).
+  async function liftCooldown(){
     clearCooldownUi();
     lsSet(LS_DEVICE, {});
     try{
@@ -848,6 +849,12 @@
       const dk = deviceKey();
       if (dk && firebaseReady && db) await db.ref('guardrail/devices/' + dk).remove();
     }catch(e){}
+  }
+
+  function showRejected(song){
+    document.getElementById('rejectText').textContent = T().rejected.replace('{song}', song);
+    document.getElementById('rejectBox').classList.add('show');
+    liftCooldown();
   }
   // -----------------------------------------------------------------
 
