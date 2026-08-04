@@ -118,7 +118,8 @@
 
   .react-picker{
     position:absolute; right:10px; bottom:10px; z-index:5;
-    display:flex; gap:4px; align-items:center;
+    display:flex; gap:4px; align-items:center; flex-wrap:wrap;
+    justify-content:center; max-width:240px;
     background:var(--navy); border:1px solid rgba(201,161,92,0.45);
     border-radius:10px; padding:6px 8px;
     box-shadow:0 8px 20px -8px rgba(0,0,0,0.8);
@@ -517,7 +518,7 @@
       if (old){ old.remove(); return; }
       const picker = document.createElement('div');
       picker.className = 'react-picker';
-      ['❤️','🔥','🎉','👏','✖'].forEach((em) => {
+      ['❤️','🔥','🎉','👏','😁','🤔','😱','🫶','🤟','👍','👎','🤝🏻','✖'].forEach((em) => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'react-opt'; b.textContent = em;
         b.addEventListener('click', (ev) => {
