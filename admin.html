@@ -116,6 +116,19 @@
   .icon-btn.done{ border-color:var(--green); color:var(--green); }
   .icon-btn:focus-visible{ outline:2px solid var(--coral); outline-offset:2px; }
 
+  .react-picker{
+    position:absolute; right:10px; bottom:10px; z-index:5;
+    display:flex; gap:4px; align-items:center;
+    background:var(--navy); border:1px solid rgba(201,161,92,0.45);
+    border-radius:10px; padding:6px 8px;
+    box-shadow:0 8px 20px -8px rgba(0,0,0,0.8);
+  }
+  .react-opt{
+    background:none; border:none; font-size:20px; cursor:pointer; padding:2px 4px;
+    border-radius:6px; line-height:1;
+  }
+  .react-opt:hover{ background:rgba(255,255,255,0.08); }
+
   .empty{
     text-align:center; padding:60px 20px; color:var(--slate);
   }
@@ -423,6 +436,9 @@
       const rejectedChip = r.rejected
         ? '<span class="cabin" style="background:rgba(255,88,88,0.18);color:#FF7A7A">🚫 not suitable — guest notified</span>'
         : '';
+      const reactionChip = r.reaction
+        ? '<span class="cabin" style="background:rgba(255,107,74,0.2);color:#FFB39C">' + escapeHtml(String(r.reaction)) + ' sent</span>'
+        : '';
       const card = document.createElement('div');
       card.className = 'req' + (r.played || r.rejected ? ' played' : '');
       card.innerHTML = `
@@ -431,10 +447,11 @@
         </div>
         <div class="req-main">
           <p class="req-song">${escapeHtml(r.song)}</p>
-          <p class="req-meta">${rejectedChip}${cabinChip}${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
+          <p class="req-meta">${reactionChip}${rejectedChip}${cabinChip}${timeAgo(r.createdAt)}${r.tipStatus === 'paid' ? ' · paid' : ' · no tip'}</p>
         </div>
         <div class="req-actions">
           <button class="icon-btn ${r.played ? 'done' : ''}" data-action="toggle" data-id="${id}" title="${r.played ? 'Mark unplayed' : 'Mark played'}">${r.played ? '✓' : '▶'}</button>
+          <button class="icon-btn ${r.reaction ? 'done' : ''}" data-action="react" data-id="${id}" title="Send a reaction to the guest">♥</button>
           <button class="icon-btn ${r.rejected ? 'done' : ''}" data-action="reject" data-id="${id}" title="${r.rejected ? 'Undo not-suitable' : 'Not suitable — notify guest'}">🚫</button>
           <button class="icon-btn" data-action="delete" data-id="${id}" title="Remove">✕</button>
         </div>
@@ -471,7 +488,7 @@
       const cabin = r.room ? ' <span style="color:var(--slate)">· ' + escapeHtml(String(r.room)) + '</span>' : '';
       html += '<div class="hist-row">'
         + '<span class="hist-time">' + time + '</span>'
-        + '<span class="hist-song">' + (r.removed ? '✕ ' : '') + (r.rejected ? '🚫 ' : '') + escapeHtml(r.song || '') + cabin + '</span>'
+        + '<span class="hist-song">' + (r.removed ? '✕ ' : '') + (r.rejected ? '🚫 ' : '') + (r.reaction ? escapeHtml(String(r.reaction)) + ' ' : '') + escapeHtml(r.song || '') + cabin + '</span>'
         + '<span class="hist-tip ' + (r.tipStatus === 'paid' ? 'paid' : 'none') + '">'
         + (r.tipStatus === 'paid' ? '€' + Number(r.amount) : '—') + '</span>'
         + '</div>';
@@ -492,6 +509,25 @@
     if (btn.dataset.action === 'toggle'){
       const current = requests[id];
       db.ref('requests/' + id + '/played').set(!current.played);
+    } else if (btn.dataset.action === 'react'){
+      // Small emoji picker — the chosen reaction pops up on the guest's
+      // phone in a fun animation. ✖ clears an already-sent reaction.
+      const card = btn.closest('.req');
+      const old = card.querySelector('.react-picker');
+      if (old){ old.remove(); return; }
+      const picker = document.createElement('div');
+      picker.className = 'react-picker';
+      ['❤️','🔥','🎉','👏','✖'].forEach((em) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'react-opt'; b.textContent = em;
+        b.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          db.ref('requests/' + id + '/reaction').set(em === '✖' ? null : em);
+          picker.remove();
+        });
+        picker.appendChild(b);
+      });
+      card.appendChild(picker);
     } else if (btn.dataset.action === 'reject'){
       // Marks the request as not suitable. The guest's page listens to this
       // flag and shows a polite notice in the guest's own language.

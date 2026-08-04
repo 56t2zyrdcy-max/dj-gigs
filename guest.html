@@ -216,6 +216,26 @@
     font-size:15px; padding:2px 4px; line-height:1; flex-shrink:0;
   }
   .reject-x:hover{ color:var(--foam); }
+
+  /* ---- DJ reaction pop ---- */
+  #reactionPop{
+    position:fixed; inset:0; z-index:70; display:none;
+    align-items:center; justify-content:center; pointer-events:none;
+  }
+  #reactionPop.show{ display:flex; }
+  .reaction-card{ text-align:center; animation:reactPop .6s cubic-bezier(.2,1.6,.4,1); }
+  #reactionEmoji{
+    font-size:110px; line-height:1.1;
+    filter:drop-shadow(0 0 34px rgba(255,46,136,0.65));
+    animation:reactBeat 1s ease-in-out infinite .6s;
+  }
+  #reactionText{
+    font-family:'Anton', sans-serif; font-size:26px; color:var(--gold);
+    margin-top:10px; text-shadow:0 2px 14px rgba(0,0,0,0.6);
+  }
+  @keyframes reactPop{ 0%{transform:scale(0); opacity:0;} 60%{transform:scale(1.15);} 100%{transform:scale(1); opacity:1;} }
+  @keyframes reactBeat{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
+  @media (prefers-reduced-motion: reduce){ .reaction-card, #reactionEmoji{ animation:none; } }
   .cooldown .clock{
     font-family:'JetBrains Mono', monospace; font-weight:700; font-size:17px;
     color:var(--gold); white-space:nowrap;
@@ -288,6 +308,13 @@
 <div class="stage-lights" aria-hidden="true"><span></span><span></span></div>
 
 <button id="langSwitch" type="button" aria-label="Sprache ändern · Change language"></button>
+
+<div id="reactionPop" aria-live="polite">
+  <div class="reaction-card">
+    <div id="reactionEmoji"></div>
+    <div id="reactionText"></div>
+  </div>
+</div>
 
 <div id="welcomeGate">
   <div class="welcome-card">
@@ -513,6 +540,7 @@
   // ===================== LANGUAGES =====================
   const I18N = {
     de: {
+      reactionMsg: "Vom DJ für dich!",
       sub: 'Wünsch dir deinen Song — ich leg ihn für dich auf.',
       note: 'Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen — Songs außerhalb dieses Themas werden nicht gespielt.',
       songLabel: 'Interpret & Song', songPh: 'z. B. Fred again.. – Marea',
@@ -537,6 +565,7 @@
       canSendNow: 'Du kannst jetzt eine neue Anfrage senden 🎧'
     },
     en: {
+      reactionMsg: "From the DJ, for you!",
       sub: "Wish for your song — I'll spin it for you.",
       note: "Tonight's requests must fit the AIDA HEUTE concept — songs outside that theme won't be played.",
       songLabel: 'Artist & Song', songPh: 'e.g. Fred again.. – Marea',
@@ -561,6 +590,7 @@
       canSendNow: 'You can send a new request now 🎧'
     },
     tr: {
+      reactionMsg: "DJ'den sana!",
       sub: 'Şarkını söyle, senin için çalayım.',
       note: 'Bu geceki istekler AIDA HEUTE konseptine uymalı — konsept dışı şarkılar çalınmaz.',
       songLabel: 'Sanatçı & Şarkı', songPh: 'örn. Fred again.. – Marea',
@@ -585,6 +615,7 @@
       canSendNow: 'Şimdi yeni bir istek gönderebilirsin 🎧'
     },
     es: {
+      reactionMsg: "¡Del DJ para ti!",
       sub: 'Pide tu canción — la pincho para ti.',
       note: 'Las peticiones de esta noche deben encajar con el concepto AIDA HEUTE — las canciones fuera del tema no sonarán.',
       songLabel: 'Artista y canción', songPh: 'p. ej. Fred again.. – Marea',
@@ -609,6 +640,7 @@
       canSendNow: 'Ya puedes enviar una nueva petición 🎧'
     },
     nl: {
+      reactionMsg: "Van de DJ, voor jou!",
       sub: 'Wens je nummer — ik draai het voor je.',
       note: 'De verzoekjes van vanavond moeten passen bij het AIDA HEUTE concept — nummers buiten dat thema worden niet gedraaid.',
       songLabel: 'Artiest & nummer', songPh: 'bijv. Fred again.. – Marea',
@@ -784,6 +816,26 @@
     }, (err) => {
       console.warn('Reject watch unavailable:', err && err.message);
     });
+    db.ref('requests/' + id + '/reaction').on('value', (snap) => {
+      const v = snap.val();
+      if (!v || typeof v !== 'string') return;
+      const reqs = loadMyReqs();
+      if (reqs[id] && reqs[id].lastReaction === v) return;
+      if (reqs[id]){ reqs[id].lastReaction = v; lsSet(LS_MYREQS, reqs); }
+      showReaction(v);
+    }, () => {});
+  }
+
+  let reactionTimer = null;
+  function showReaction(emoji){
+    const pop = document.getElementById('reactionPop');
+    document.getElementById('reactionEmoji').textContent = emoji;
+    document.getElementById('reactionText').textContent = T().reactionMsg;
+    pop.classList.remove('show');
+    void pop.offsetWidth;   // animasyonu yeniden tetikle
+    pop.classList.add('show');
+    clearTimeout(reactionTimer);
+    reactionTimer = setTimeout(() => pop.classList.remove('show'), 5500);
   }
   async function showRejected(song){
     document.getElementById('rejectText').textContent = T().rejected.replace('{song}', song);
