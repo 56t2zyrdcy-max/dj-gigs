@@ -386,7 +386,7 @@
         <button type="button" class="tip-btn" data-amt="20">€20</button>
         <button type="button" class="tip-btn" id="customToggle" data-amt="custom">Custom</button>
       </div>
-      <input type="number" id="customAmt" min="10" step="1" placeholder="€ amount — min €10" hidden>
+      <input type="text" inputmode="decimal" id="customAmt" placeholder="€ amount — min €5" hidden>
 
       <div class="stamp-row">
         <span class="stamp-label" id="stampLabel">Selected tip</span>
@@ -398,7 +398,7 @@
   <div class="actions">
     <div class="cooldown" id="cooldownBox">
       <span class="clock" id="cooldownClock">30:00</span>
-      <span id="cooldownText">This phone or cabin already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.</span>
+      <span id="cooldownText">This phone or cabin already sent a free request. You can send the next one when the clock runs out — or add a tip (min €5) to send right away.</span>
     </div>
     <div class="cooldown reject" id="rejectBox" role="alert">
       <span id="rejectText"></span>
@@ -545,13 +545,13 @@
       note: 'Die heutigen Wünsche müssen zum AIDA HEUTE Konzept passen — Songs außerhalb dieses Themas werden nicht gespielt.',
       songLabel: 'Interpret & Song', songPh: 'z. B. Fred again.. – Marea',
       hint: 'Alle 30 Minuten eine kostenlose Anfrage. Mit Trinkgeld geht dein Song sofort durch.',
-      tipLabel: 'Trinkgeld hinzufügen (optional)', custom: 'Anderer Betrag', customPh: '€ Betrag — min. €10',
+      tipLabel: 'Trinkgeld hinzufügen (optional)', custom: 'Anderer Betrag', customPh: '€ Betrag — min. €5',
       selectedTip: 'Gewähltes Trinkgeld',
-      cooldownText: 'Dieses Handy hat schon eine kostenlose Anfrage gesendet. Wenn die Uhr abläuft, geht die nächste — oder sende mit Trinkgeld (min. €10) sofort.',
+      cooldownText: 'Dieses Handy hat schon eine kostenlose Anfrage gesendet. Wenn die Uhr abläuft, geht die nächste — oder sende mit Trinkgeld (min. €5) sofort.',
       sendFree: 'Anfrage senden', sendFreeAlt: 'Oder ohne Trinkgeld senden',
       errSong: 'Bitte zuerst Interpret und Songtitel eingeben.',
       dupSong: 'Dieser Song steht schon in der Liste. Wähle einen anderen.',
-      cooldownMsg: 'Dieses Handy hat schon eine kostenlose Anfrage — noch {left}, oder sende mit Trinkgeld (min. €10) sofort.',
+      cooldownMsg: 'Dieses Handy hat schon eine kostenlose Anfrage — noch {left}, oder sende mit Trinkgeld (min. €5) sofort.',
       checking: 'Prüfe…', sending: 'Anfrage wird gesendet…', sent: 'Anfrage gesendet. Der DJ hat sie 🎧',
       wrong: 'Etwas ist schiefgelaufen. Versuch es nochmal.',
       setup: 'Die Einrichtung ist noch nicht fertig — die Anfrage konnte nicht gespeichert werden.',
@@ -570,13 +570,13 @@
       note: "Tonight's requests must fit the AIDA HEUTE concept — songs outside that theme won't be played.",
       songLabel: 'Artist & Song', songPh: 'e.g. Fred again.. – Marea',
       hint: 'One free request every 30 minutes. With a tip your song goes through right away.',
-      tipLabel: 'Add a tip (optional)', custom: 'Custom', customPh: '€ amount — min €10',
+      tipLabel: 'Add a tip (optional)', custom: 'Custom', customPh: '€ amount — min €5',
       selectedTip: 'Selected tip',
-      cooldownText: 'This phone already sent a free request. You can send the next one when the clock runs out — or add a tip (min €10) to send right away.',
+      cooldownText: 'This phone already sent a free request. You can send the next one when the clock runs out — or add a tip (min €5) to send right away.',
       sendFree: 'Send request', sendFreeAlt: 'Or send without a tip',
       errSong: 'Add the artist and song name first.',
       dupSong: "That song is already in tonight's queue. Pick another one.",
-      cooldownMsg: 'This phone already sent a free request — {left} left, or add a tip (min €10) to send now.',
+      cooldownMsg: 'This phone already sent a free request — {left} left, or add a tip (min €5) to send now.',
       checking: 'Checking…', sending: 'Sending your request…', sent: 'Request sent. The DJ has it now 🎧',
       wrong: 'Something went wrong. Try again.',
       setup: "Setup isn't finished yet — this request could not be saved.",
@@ -595,13 +595,13 @@
       note: 'Bu geceki istekler AIDA HEUTE konseptine uymalı — konsept dışı şarkılar çalınmaz.',
       songLabel: 'Sanatçı & Şarkı', songPh: 'örn. Fred again.. – Marea',
       hint: '30 dakikada bir ücretsiz istek. Bahşişle şarkın hemen geçer.',
-      tipLabel: 'Bahşiş ekle (isteğe bağlı)', custom: 'Özel tutar', customPh: '€ tutar — min €10',
+      tipLabel: 'Bahşiş ekle (isteğe bağlı)', custom: 'Özel tutar', customPh: '€ tutar — min €5',
       selectedTip: 'Seçilen bahşiş',
-      cooldownText: 'Bu telefondan zaten ücretsiz istek gönderildi. Süre bitince yenisini gönderebilirsin — ya da bahşişle (min €10) hemen gönder.',
+      cooldownText: 'Bu telefondan zaten ücretsiz istek gönderildi. Süre bitince yenisini gönderebilirsin — ya da bahşişle (min €5) hemen gönder.',
       sendFree: 'İstek gönder', sendFreeAlt: 'Ya da bahşişsiz gönder',
       errSong: 'Önce sanatçı ve şarkı adını yaz.',
       dupSong: 'Bu şarkı zaten bu gecenin listesinde. Başka bir tane seç.',
-      cooldownMsg: 'Bu telefondan zaten ücretsiz istek gönderildi — {left} kaldı, ya da bahşişle (min €10) hemen gönder.',
+      cooldownMsg: 'Bu telefondan zaten ücretsiz istek gönderildi — {left} kaldı, ya da bahşişle (min €5) hemen gönder.',
       checking: 'Kontrol ediliyor…', sending: 'İsteğin gönderiliyor…', sent: 'İstek gönderildi. DJ gördü 🎧',
       wrong: 'Bir şeyler ters gitti. Tekrar dene.',
       setup: 'Kurulum henüz bitmedi — istek kaydedilemedi.',
@@ -620,13 +620,13 @@
       note: 'Las peticiones de esta noche deben encajar con el concepto AIDA HEUTE — las canciones fuera del tema no sonarán.',
       songLabel: 'Artista y canción', songPh: 'p. ej. Fred again.. – Marea',
       hint: 'Una petición gratis cada 30 minutos. Con propina tu canción pasa al momento.',
-      tipLabel: 'Añadir propina (opcional)', custom: 'Otra cantidad', customPh: '€ importe — mín. €10',
+      tipLabel: 'Añadir propina (opcional)', custom: 'Otra cantidad', customPh: '€ importe — mín. €5',
       selectedTip: 'Propina elegida',
-      cooldownText: 'Este teléfono ya envió una petición gratis. Cuando el reloj termine podrás enviar otra — o envía ya con propina (mín. €10).',
+      cooldownText: 'Este teléfono ya envió una petición gratis. Cuando el reloj termine podrás enviar otra — o envía ya con propina (mín. €5).',
       sendFree: 'Enviar petición', sendFreeAlt: 'O enviar sin propina',
       errSong: 'Escribe primero el artista y el título.',
       dupSong: 'Esa canción ya está en la lista de esta noche. Elige otra.',
-      cooldownMsg: 'Este teléfono ya envió una petición gratis — quedan {left}, o envía ya con propina (mín. €10).',
+      cooldownMsg: 'Este teléfono ya envió una petición gratis — quedan {left}, o envía ya con propina (mín. €5).',
       checking: 'Comprobando…', sending: 'Enviando tu petición…', sent: 'Petición enviada. El DJ ya la tiene 🎧',
       wrong: 'Algo salió mal. Inténtalo de nuevo.',
       setup: 'La configuración aún no está lista — la petición no se guardó.',
@@ -645,13 +645,13 @@
       note: 'De verzoekjes van vanavond moeten passen bij het AIDA HEUTE concept — nummers buiten dat thema worden niet gedraaid.',
       songLabel: 'Artiest & nummer', songPh: 'bijv. Fred again.. – Marea',
       hint: 'Elke 30 minuten één gratis verzoekje. Met fooi gaat je nummer meteen door.',
-      tipLabel: 'Fooi toevoegen (optioneel)', custom: 'Ander bedrag', customPh: '€ bedrag — min. €10',
+      tipLabel: 'Fooi toevoegen (optioneel)', custom: 'Ander bedrag', customPh: '€ bedrag — min. €5',
       selectedTip: 'Gekozen fooi',
-      cooldownText: 'Deze telefoon heeft al een gratis verzoekje gestuurd. Als de klok afloopt kan het volgende — of stuur meteen met fooi (min. €10).',
+      cooldownText: 'Deze telefoon heeft al een gratis verzoekje gestuurd. Als de klok afloopt kan het volgende — of stuur meteen met fooi (min. €5).',
       sendFree: 'Verzoekje sturen', sendFreeAlt: 'Of sturen zonder fooi',
       errSong: 'Vul eerst de artiest en de titel in.',
       dupSong: 'Dat nummer staat al in de lijst van vanavond. Kies een ander.',
-      cooldownMsg: 'Deze telefoon stuurde al een gratis verzoekje — nog {left}, of stuur meteen met fooi (min. €10).',
+      cooldownMsg: 'Deze telefoon stuurde al een gratis verzoekje — nog {left}, of stuur meteen met fooi (min. €5).',
       checking: 'Controleren…', sending: 'Je verzoekje wordt verstuurd…', sent: 'Verzoekje verstuurd. De DJ heeft het 🎧',
       wrong: 'Er ging iets mis. Probeer het opnieuw.',
       setup: 'De installatie is nog niet klaar — het verzoekje is niet opgeslagen.',
@@ -699,7 +699,7 @@
   const COOLDOWN_MS = 30 * 60 * 1000;      // 30 minutes
   // Tips below this are not accepted — the buttons offer €10/€20 and the
   // custom field refuses anything smaller.
-  const MIN_TIP = 10;
+  const MIN_TIP = 5;
   // The same song can't be requested twice within this window (one night).
   const DUP_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
   const LS_SONGS = 'djozmen.songs';
@@ -952,14 +952,14 @@
   }
 
   function updatePaypalVisibility(){
-    // The payment button only appears for a valid tip (€10 or more).
+    // The payment button only appears for a valid tip (MIN_TIP or more).
     paypalContainer.style.display = selectedAmount >= MIN_TIP ? 'block' : 'none';
     sendFreeBtn.textContent = selectedAmount >= MIN_TIP ? T().sendFreeAlt : T().sendFree;
   }
 
   function setAmount(amt){
     selectedAmount = amt;
-    amountStamp.textContent = '€' + amt;
+    amountStamp.textContent = (amt > 0 && amt < MIN_TIP) ? ('min €' + MIN_TIP) : ('€' + amt);
     updatePaypalVisibility();
   }
 
@@ -969,8 +969,9 @@
       btn.classList.add('active');
       if (btn.dataset.amt === 'custom'){
         customAmt.hidden = false;
-        customAmt.focus();
-        setAmount(Number(customAmt.value) || 0);
+        if (!customAmt.value) customAmt.value = String(MIN_TIP);
+        customAmt.focus(); customAmt.select();
+        setAmount((parseFloat(String(customAmt.value).replace(',','.')) || 0));
       } else {
         customAmt.hidden = true;
         setAmount(Number(btn.dataset.amt));
@@ -979,7 +980,7 @@
   });
 
   customAmt.addEventListener('input', () => {
-    setAmount(Number(customAmt.value) || 0);
+    setAmount((parseFloat(String(customAmt.value).replace(',','.')) || 0));
   });
 
   function currentSong(){ return songInput.value.trim(); }
